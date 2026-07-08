@@ -2,7 +2,25 @@
 
 표기: [Semantic Versioning](https://semver.org/lang/ko/) · 형식: [Keep a Changelog](https://keepachangelog.com/ko/)
 
-## [Unreleased] — M0 기반 다지기
+## [1.1.0] — 2026-07-08 · "살아 움직이는 전술"
+
+### Added
+- **전술 움직임 애니메이션** (ADR-002): `Board.steps` 스키마(선수 id 기반, additive),
+  재생 엔진(순수 보간 함수, 렌더러 독립), 재생/단계 이동/배속 컨트롤,
+  `prefers-reduced-motion` 스틸 컷 폴백. 시퀀스 6종: 게겐프레싱·티키타카·역습·
+  오프사이드 트랩·니어포스트 코너·하이 프레스
+- **콘텐츠 팩 10종 (20→30종)**: 신규 카테고리 '빌드업·전개'(살리다 라볼피아나,
+  인버티드 풀백, 하프 스페이스, 스위칭) + 가짜 9번, 오버로드 투 아이솔레이트,
+  대인 vs 지역방어, 수비 전환, 스로인 루틴, 지역방어 코너 수비. 역링크 통합
+- **PWA**: 웹 매니페스트+아이콘, 서비스 워커 오프라인 캐시(빌드 시 정확한
+  프리캐시 목록·버전 자동 생성), 새 버전 새로고침 토스트, kill switch 절차
+  (scripts/sw-kill.js, 리허설 실증), 오프라인 E2E 2종
+
+### Fixed
+- SW 최초 설치 시 페이지가 불필요하게 새로고침되던 문제 (clients.claim 레이스)
+- Vary 헤더 환경에서 오프라인 캐시 매칭 실패 (ignoreVary)
+
+## [M0] — 2026-07-08 · 기반 다지기
 
 ### Added
 - 검증 파이프라인: ESLint + Prettier + `npm run check`, Vitest 단위·데이터 무결성 테스트 46건, 보드 렌더 스냅샷 기준선 21건, Playwright E2E 스모크 6종(데스크톱/모바일), GitHub Actions CI

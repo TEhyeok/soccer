@@ -6,12 +6,19 @@ import { getTactic, TACTICS } from './data';
 import { useFavorites, useHashRoute } from './hooks';
 import { track } from './lib/analytics';
 import { filterTactics, INITIAL_FILTERS, type Filters } from './lib/filterTactics';
+import { registerSW } from './lib/sw';
 import { FEEDBACK_EMAIL } from './config';
 
 export default function App() {
   const route = useHashRoute();
   const { favorites, toggle } = useFavorites();
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
+  const [applyUpdate, setApplyUpdate] = useState<(() => void) | null>(null);
+
+  // PWA: 새 버전 대기 시 새로고침 토스트 (v1.1-E3)
+  useEffect(() => {
+    registerSW((apply) => setApplyUpdate(() => apply));
+  }, []);
 
   const filtered = useMemo(() => filterTactics(TACTICS, filters, favorites), [filters, favorites]);
 
@@ -90,6 +97,15 @@ export default function App() {
           </>
         )}
       </main>
+
+      {applyUpdate && (
+        <div className="toast" role="status">
+          <span>새 버전이 준비됐습니다</span>
+          <button className="toast__btn" onClick={applyUpdate}>
+            새로고침
+          </button>
+        </div>
+      )}
 
       <footer className="footer">
         <p>

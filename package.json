@@ -1,12 +1,12 @@
 {
   "name": "tacticbook",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "택틱북 — 축구 전략·전술 모음집",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/build-sw.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write .",

@@ -589,3 +589,32 @@ body {
   font-family: ui-monospace, 'SF Mono', Consolas, monospace;
   font-variant-numeric: tabular-nums;
 }
+
+/* ───────── PWA 업데이트 토스트 (v1.1) ───────── */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface-2);
+  border: 1px solid var(--accent-deep);
+  border-radius: 999px;
+  padding: 10px 12px 10px 20px;
+  font-size: 14px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.toast__btn {
+  background: var(--accent-deep);
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
