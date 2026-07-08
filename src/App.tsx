@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import FilterBar from './components/FilterBar';
 import TacticCard from './components/TacticCard';
 import TacticDetail from './components/TacticDetail';
+import Editor from './components/Editor';
+import MyTactics from './components/MyTactics';
 import { getTactic, TACTICS } from './data';
 import { useFavorites, useHashRoute } from './hooks';
 import { track } from './lib/analytics';
@@ -70,10 +72,22 @@ export default function App() {
             <small>축구 전략·전술 모음집</small>
           </span>
         </a>
+        <nav className="header__nav">
+          <a href="#/editor" className={route[0] === 'editor' ? 'active' : ''}>
+            보드 만들기
+          </a>
+          <a href="#/my" className={route[0] === 'my' ? 'active' : ''}>
+            내 전술
+          </a>
+        </nav>
       </header>
 
       <main className="main">
-        {detail && route[2] === '3d' ? (
+        {route[0] === 'editor' ? (
+          <Editor key={route[1] ?? 'new'} editingId={route[1]} />
+        ) : route[0] === 'my' ? (
+          <MyTactics />
+        ) : detail && route[2] === '3d' ? (
           <div className="detail">
             <nav className="detail__nav">
               <a href={`#/t/${detail.id}`} className="back">

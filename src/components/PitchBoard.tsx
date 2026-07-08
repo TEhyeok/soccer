@@ -1,16 +1,11 @@
+import type { PointerEvent as ReactPointerEvent, Ref } from 'react';
 import type { Arrow, Board, Point } from '../types';
+import { PITCH_H, PITCH_PAD, PITCH_W, toSvg, VIEW_H, VIEW_W } from '../lib/coords';
 
-/** 실측 비율(68m x 105m) 기반 세로형 축구장 */
-const W = 68;
-const H = 105;
-const PAD = 3;
-
-function px(p: Point): { x: number; y: number } {
-  return {
-    x: PAD + (p.x / 100) * W,
-    y: PAD + ((100 - p.y) / 100) * H, // y=100(상대 골문)이 화면 위쪽
-  };
-}
+const W = PITCH_W;
+const H = PITCH_H;
+const PAD = PITCH_PAD;
+const px = (p: Point) => toSvg(p);
 
 const ARROW_STYLE: Record<Arrow['kind'], { stroke: string; dash?: string }> = {
   run: { stroke: 'var(--arrow-run)' },
@@ -35,15 +30,28 @@ function arrowPath(a: Arrow): string {
   return `M ${from.x} ${from.y} Q ${cx} ${cy} ${to.x} ${to.y}`;
 }
 
+/** 편집기 모드 옵션 (v1.2-E2) — 없으면 기존과 완전히 동일한 정적 렌더 */
+export interface EditorHooks {
+  svgRef: Ref<SVGSVGElement>;
+  onBoardPointerDown?: (e: ReactPointerEvent<SVGSVGElement>) => void;
+  onBoardPointerMove?: (e: ReactPointerEvent<SVGSVGElement>) => void;
+  onBoardPointerUp?: (e: ReactPointerEvent<SVGSVGElement>) => void;
+  onPlayerPointerDown?: (id: string, e: ReactPointerEvent<SVGGElement>) => void;
+  selectedId?: string | null;
+  /** 그리는 중인 화살표 미리보기 */
+  tempArrow?: Arrow | null;
+}
+
 interface Props {
   board: Board;
   mini?: boolean;
   title?: string;
+  editor?: EditorHooks;
 }
 
-export default function PitchBoard({ board, mini = false, title }: Props) {
-  const vw = W + PAD * 2;
-  const vh = H + PAD * 2;
+export default function PitchBoard({ board, mini = false, title, editor }: Props) {
+  const vw = VIEW_W;
+  const vh = VIEW_H;
   const r = mini ? 2.6 : 2.9; // 선수 마커 반지름
   const line = 'var(--pitch-line)';
 
@@ -53,6 +61,11 @@ export default function PitchBoard({ board, mini = false, title }: Props) {
       className={mini ? 'pitch pitch--mini' : 'pitch'}
       role="img"
       aria-label={title ? `${title} 전술 보드` : '전술 보드'}
+      ref={editor?.svgRef}
+      onPointerDown={editor?.onBoardPointerDown}
+      onPointerMove={editor?.onBoardPointerMove}
+      onPointerUp={editor?.onBoardPointerUp}
+      style={editor ? { touchAction: 'none' } : undefined}
     >
       <defs>
         {(['run', 'pass', 'press'] as const).map((kind) => (
@@ -122,11 +135,40 @@ export default function PitchBoard({ board, mini = false, title }: Props) {
         />
       ))}
 
+      {/* 그리는 중인 화살표 (편집기) */}
+      {editor?.tempArrow && (
+        <path
+          d={arrowPath(editor.tempArrow)}
+          stroke={ARROW_STYLE[editor.tempArrow.kind].stroke}
+          strokeDasharray={ARROW_STYLE[editor.tempArrow.kind].dash}
+          strokeWidth="1"
+          strokeLinecap="round"
+          fill="none"
+          markerEnd={`url(#ah-${editor.tempArrow.kind})`}
+          opacity="0.6"
+        />
+      )}
+
       {/* 상대 팀 */}
       {board.opponents?.map((p) => {
         const c = px(p);
         return (
-          <g key={p.id} opacity="0.85">
+          <g
+            key={p.id}
+            opacity="0.85"
+            onPointerDown={editor ? (e) => editor.onPlayerPointerDown?.(p.id, e) : undefined}
+          >
+            {editor?.selectedId === p.id && (
+              <circle
+                cx={c.x}
+                cy={c.y}
+                r={r * 1.35}
+                fill="none"
+                stroke="#fff"
+                strokeWidth="0.5"
+                strokeDasharray="1.2 0.8"
+              />
+            )}
             <circle
               cx={c.x}
               cy={c.y}
@@ -155,7 +197,21 @@ export default function PitchBoard({ board, mini = false, title }: Props) {
       {board.players.map((p) => {
         const c = px(p);
         return (
-          <g key={p.id}>
+          <g
+            key={p.id}
+            onPointerDown={editor ? (e) => editor.onPlayerPointerDown?.(p.id, e) : undefined}
+          >
+            {editor?.selectedId === p.id && (
+              <circle
+                cx={c.x}
+                cy={c.y}
+                r={r * 1.35}
+                fill="none"
+                stroke="#fff"
+                strokeWidth="0.5"
+                strokeDasharray="1.2 0.8"
+              />
+            )}
             <circle
               cx={c.x}
               cy={c.y}

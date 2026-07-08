@@ -4,6 +4,8 @@ import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '../types';
 import { getTactic, TACTICS } from '../data';
 import { track } from '../lib/analytics';
 import { shareBoardImage } from '../lib/exportImage';
+import { saveDraft } from '../lib/customTactics';
+import { boardFromTemplate } from './Editor';
 import PitchBoard from './PitchBoard';
 import PlaybackBoard from './PlaybackBoard';
 
@@ -28,6 +30,17 @@ export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: P
     } catch {
       setShareState('idle');
     }
+  };
+
+  // v1.2-E4: 라이브러리 보드를 편집기 draft로 복사 (steps 제거 — 정적 보드만 편집)
+  const makeBoard = () => {
+    saveDraft({
+      name: `${tactic.name} (내 버전)`,
+      board: boardFromTemplate(tactic.board),
+      source: { id: tactic.id, name: tactic.name },
+    });
+    track('board_created', { from: 'detail-template' });
+    window.location.hash = '#/editor';
   };
 
   const counters = tactic.counters
@@ -85,6 +98,9 @@ export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: P
               : shareState === 'done'
                 ? '✓ 저장됨 — 단톡에 붙여넣으세요'
                 : '📤 이미지로 공유'}
+          </button>
+          <button className="chip" onClick={makeBoard}>
+            ✏️ 이 전술로 보드 만들기
           </button>
         </div>
         <div className="legend">

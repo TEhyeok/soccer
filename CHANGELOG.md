@@ -2,6 +2,23 @@
 
 표기: [Semantic Versioning](https://semver.org/lang/ko/) · 형식: [Keep a Changelog](https://keepachangelog.com/ko/)
 
+## [1.2.0] — 2026-07-08 · "나만의 전술 보드"
+
+### Added
+- **전술 이미지 공유**: 보드 SVG→PNG(CSS 변수 인라인·워터마크), Web Share API +
+  다운로드 폴백 — 라이브러리·재생 보드·편집기 어디서나 단톡 공유
+- **커스텀 보드 편집기** (`#/editor`): 선수 드래그 배치, 우리/상대 선수 추가·삭제·라벨,
+  화살표 3종(run/pass/press) 드래그 그리기, 공 배치, 되돌리기(50단계)
+- **내 전술** (`#/my`): localStorage envelope 버저닝(v1) 저장, 자동 draft(새로고침 복원),
+  목록·복제·삭제, JSON 내보내기/가져오기(백업 + v1.3 계정 마이그레이션 보험)
+- **템플릿 시작**: 상세 화면 "이 전술로 보드 만들기"(출처 표시), 편집기 시작 화면
+  (기본 4-4-2 / 빈 보드 / 포메이션 7종)
+- 계측: board_created, image_shared
+
+### Fixed
+- SVG 레터박스 환경(데스크톱 max-height)에서 편집기 드래그 좌표가 어긋나던 문제
+  (preserveAspectRatio 보정 — E2E가 발견)
+
 ## [1.1.0] — 2026-07-08 · "살아 움직이는 전술"
 
 ### Added
