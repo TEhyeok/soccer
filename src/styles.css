@@ -618,3 +618,37 @@ body {
   font-weight: 700;
   cursor: pointer;
 }
+
+/* ───────── 3D 보기 스파이크 (v1.1-E4) ───────── */
+.board3d__canvas {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  min-height: 300px;
+}
+
+.board3d__canvas canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: none;
+}
+
+.board3d__loading {
+  text-align: center;
+  color: var(--text-dim);
+  padding: 40px 0;
+}
+
+.board3d__meta {
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  margin-top: 10px;
+}
+
+.detail__nav .chip--link small {
+  font-size: 10px;
+  opacity: 0.8;
+}

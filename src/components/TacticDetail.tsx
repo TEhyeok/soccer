@@ -26,6 +26,13 @@ export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: P
         <a href="#/" className="back">
           ← 라이브러리
         </a>
+        <a
+          className="chip chip--link"
+          href={`#/t/${tactic.id}/3d`}
+          onClick={() => track('view3d_open', { tactic: tactic.id })}
+        >
+          3D 보기 <small>베타</small>
+        </a>
         <button
           className={isFavorite ? 'fav fav--on' : 'fav'}
           onClick={() => onToggleFavorite(tactic.id)}

@@ -15,6 +15,13 @@ export default tseslint.config(
     },
   },
   {
+    // 서비스 워커 (kill switch 템플릿)
+    files: ['scripts/sw-kill.js'],
+    languageOptions: {
+      globals: { self: 'readonly', caches: 'readonly' },
+    },
+  },
+  {
     files: ['src/**/*.{ts,tsx}'],
     plugins: { 'react-hooks': reactHooks },
     rules: {

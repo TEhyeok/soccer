@@ -8,8 +8,9 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
 
 const assets = readdirSync('dist/assets');
-const jsFile = assets.find((f) => f.endsWith('.js'));
-const cssFile = assets.find((f) => f.endsWith('.css'));
+// 메인 청크만 인라인 — lazy 청크(3D 등)는 단일 파일 모드에서 미지원 (런타임 폴백 안내)
+const jsFile = assets.find((f) => f.startsWith('index-') && f.endsWith('.js'));
+const cssFile = assets.find((f) => f.startsWith('index-') && f.endsWith('.css'));
 if (!jsFile || !cssFile) {
   console.error('dist/assets 에 빌드 산출물이 없습니다. 먼저 npm run build 를 실행하세요.');
   process.exit(1);

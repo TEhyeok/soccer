@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import FilterBar from './components/FilterBar';
 import TacticCard from './components/TacticCard';
 import TacticDetail from './components/TacticDetail';
@@ -8,6 +8,21 @@ import { track } from './lib/analytics';
 import { filterTactics, INITIAL_FILTERS, type Filters } from './lib/filterTactics';
 import { registerSW } from './lib/sw';
 import { FEEDBACK_EMAIL } from './config';
+
+// 3D 스파이크 (ADR-008): 별도 청크 — 기본 번들 크기에 영향 없음.
+// 청크를 못 가져오는 환경(단일 파일 시뮬레이터, 오프라인 미캐시)에선 안내로 폴백.
+const Board3D = lazy(() =>
+  import('./components/Board3D').catch(() => ({
+    default: ({ tactic }: { tactic: { id: string } }) => (
+      <div className="empty">
+        <p>이 환경에서는 3D 보기를 불러올 수 없습니다.</p>
+        <a className="chip chip--link" href={`#/t/${tactic.id}`}>
+          ← 2D 보드로
+        </a>
+      </div>
+    ),
+  }))
+);
 
 export default function App() {
   const route = useHashRoute();
@@ -58,7 +73,20 @@ export default function App() {
       </header>
 
       <main className="main">
-        {detail ? (
+        {detail && route[2] === '3d' ? (
+          <div className="detail">
+            <nav className="detail__nav">
+              <a href={`#/t/${detail.id}`} className="back">
+                ← 2D 보드
+              </a>
+              <span className="badge badge--diff">3D 보기 · 베타</span>
+            </nav>
+            <h1 style={{ marginBottom: 12 }}>{detail.name}</h1>
+            <Suspense fallback={<p className="board3d__loading">3D 모듈 불러오는 중…</p>}>
+              <Board3D tactic={detail} />
+            </Suspense>
+          </div>
+        ) : detail ? (
           <TacticDetail
             key={detail.id}
             tactic={detail}

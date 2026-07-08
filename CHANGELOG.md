@@ -16,6 +16,10 @@
   프리캐시 목록·버전 자동 생성), 새 버전 새로고침 토스트, kill switch 절차
   (scripts/sw-kill.js, 리허설 실증), 오프라인 E2E 2종
 
+- **3D 보기 스파이크** (ADR-008 검증, `#/t/:id/3d` 베타): three.js WebGPU+WebGL2 폴백,
+  선수 인스턴싱, 카메라 프리셋 3종, steps 3D 재생(2D와 보간 함수 공유).
+  측정 결과·판단 재료는 docs/SPIKE-3D.md
+
 ### Fixed
 - SW 최초 설치 시 페이지가 불필요하게 새로고침되던 문제 (clients.claim 레이스)
 - Vary 헤더 환경에서 오프라인 캐시 매칭 실패 (ignoreVary)
