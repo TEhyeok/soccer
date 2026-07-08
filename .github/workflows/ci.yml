@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    # M0 게이트: CI 전체 5분 이내 (초과 시 즉시 실패로 드러나도록 상한을 빠듯하게 유지)
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: 린트·포맷·타입체크
+        run: npm run check
+      - name: 단위·데이터 무결성 테스트
+        run: npm test
+      - name: 프로덕션 빌드
+        run: npm run build
+      - name: Playwright 브라우저 설치
+        run: npx playwright install --with-deps chromium
+      - name: E2E 스모크
+        run: npx playwright test
+      - name: 실패 시 트레이스 업로드
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

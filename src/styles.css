@@ -41,8 +41,15 @@ html {
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo',
-    'Noto Sans KR', 'Malgun Gothic', system-ui, sans-serif;
+  font-family:
+    'Pretendard',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Apple SD Gothic Neo',
+    'Noto Sans KR',
+    'Malgun Gothic',
+    system-ui,
+    sans-serif;
   line-height: 1.6;
 }
 
@@ -148,7 +155,9 @@ body {
   font-size: 13px;
   cursor: pointer;
   text-decoration: none;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .chip:hover {
@@ -181,11 +190,21 @@ body {
   color: #0b0f0c;
 }
 
-.badge--formation { background: var(--cat-formation); }
-.badge--attack { background: var(--cat-attack); }
-.badge--defense { background: var(--cat-defense); }
-.badge--pressing { background: var(--cat-pressing); }
-.badge--setpiece { background: var(--cat-setpiece); }
+.badge--formation {
+  background: var(--cat-formation);
+}
+.badge--attack {
+  background: var(--cat-attack);
+}
+.badge--defense {
+  background: var(--cat-defense);
+}
+.badge--pressing {
+  background: var(--cat-pressing);
+}
+.badge--setpiece {
+  background: var(--cat-setpiece);
+}
 .badge--diff {
   background: transparent;
   border: 1px solid var(--border);
@@ -206,7 +225,9 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  transition: transform 0.15s, border-color 0.15s;
+  transition:
+    transform 0.15s,
+    border-color 0.15s;
 }
 
 .card:hover {
@@ -374,9 +395,16 @@ body {
   border-top: 2.5px solid;
 }
 
-.legend__line--run { border-color: var(--arrow-run); }
-.legend__line--pass { border-color: var(--arrow-pass); border-top-style: dashed; }
-.legend__line--press { border-color: var(--arrow-press); }
+.legend__line--run {
+  border-color: var(--arrow-run);
+}
+.legend__line--pass {
+  border-color: var(--arrow-pass);
+  border-top-style: dashed;
+}
+.legend__line--press {
+  border-color: var(--arrow-press);
+}
 
 .legend__dot {
   display: inline-block;
@@ -430,8 +458,12 @@ body {
   padding: 14px 16px;
 }
 
-.detail__section--good h2 { color: var(--accent); }
-.detail__section--bad h2 { color: #f87171; }
+.detail__section--good h2 {
+  color: var(--accent);
+}
+.detail__section--bad h2 {
+  color: #f87171;
+}
 
 .keypoints li::marker {
   color: var(--accent);

@@ -2,8 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 /** '#/t/f433' → ['t', 'f433'], '#/' → [] */
 export function useHashRoute(): string[] {
-  const parse = () =>
-    window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const parse = () => window.location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
   const [route, setRoute] = useState<string[]>(parse);
 
   useEffect(() => {

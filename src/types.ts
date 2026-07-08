@@ -8,7 +8,9 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   setpiece: '세트피스',
 };
 
-export const DIFFICULTY_LABELS: Record<number, string> = {
+export type Difficulty = 1 | 2 | 3;
+
+export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   1: '기본',
   2: '중급',
   3: '고급',
@@ -21,6 +23,11 @@ export interface Point {
 }
 
 export interface PlayerPos extends Point {
+  /**
+   * 보드 내 유일 식별자 (ADR-001). 애니메이션 트위닝·편집기·3D 뷰어의 공통 기반.
+   * 한 번 배포된 id는 변경하지 않는다.
+   */
+  id: string;
   role: string;
 }
 
@@ -32,6 +39,8 @@ export interface Arrow {
   kind: ArrowKind;
   /** 곡률(-1~1). 양수면 진행 방향 기준 오른쪽으로 휨 */
   curve?: number;
+  /** 행위 주체 선수 id (ADR-001, optional) */
+  subjectId?: string;
 }
 
 export interface Board {
@@ -46,7 +55,7 @@ export interface Tactic {
   name: string;
   nameEn: string;
   category: Category;
-  difficulty: 1 | 2 | 3;
+  difficulty: Difficulty;
   summary: string;
   description: string[];
   strengths: string[];

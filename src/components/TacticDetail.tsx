@@ -1,6 +1,7 @@
 import type { Tactic } from '../types';
 import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '../types';
-import { getTactic, TACTICS } from '../data/tactics';
+import { getTactic, TACTICS } from '../data';
+import { track } from '../lib/analytics';
 import PitchBoard from './PitchBoard';
 
 interface Props {
@@ -13,14 +14,17 @@ export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: P
   const counters = tactic.counters
     .map((id) => getTactic(id))
     .filter((t): t is Tactic => Boolean(t));
-  const related = TACTICS.filter(
-    (t) => t.category === tactic.category && t.id !== tactic.id
-  ).slice(0, 4);
+  const related = TACTICS.filter((t) => t.category === tactic.category && t.id !== tactic.id).slice(
+    0,
+    4
+  );
 
   return (
     <div className="detail">
       <nav className="detail__nav">
-        <a href="#/" className="back">← 라이브러리</a>
+        <a href="#/" className="back">
+          ← 라이브러리
+        </a>
         <button
           className={isFavorite ? 'fav fav--on' : 'fav'}
           onClick={() => onToggleFavorite(tactic.id)}
@@ -32,7 +36,9 @@ export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: P
 
       <header className="detail__head">
         <div className="detail__badges">
-          <span className={`badge badge--${tactic.category}`}>{CATEGORY_LABELS[tactic.category]}</span>
+          <span className={`badge badge--${tactic.category}`}>
+            {CATEGORY_LABELS[tactic.category]}
+          </span>
           <span className="badge badge--diff">난이도: {DIFFICULTY_LABELS[tactic.difficulty]}</span>
         </div>
         <h1>{tactic.name}</h1>
@@ -43,11 +49,19 @@ export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: P
       <div className="detail__board">
         <PitchBoard board={tactic.board} title={tactic.name} />
         <div className="legend">
-          <span><i className="legend__line legend__line--run" /> 선수 이동</span>
-          <span><i className="legend__line legend__line--pass" /> 패스</span>
-          <span><i className="legend__line legend__line--press" /> 압박</span>
+          <span>
+            <i className="legend__line legend__line--run" /> 선수 이동
+          </span>
+          <span>
+            <i className="legend__line legend__line--pass" /> 패스
+          </span>
+          <span>
+            <i className="legend__line legend__line--press" /> 압박
+          </span>
           {tactic.board.opponents?.length ? (
-            <span><i className="legend__dot legend__dot--opp" /> 상대 팀</span>
+            <span>
+              <i className="legend__dot legend__dot--opp" /> 상대 팀
+            </span>
           ) : null}
         </div>
       </div>
@@ -92,7 +106,12 @@ export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: P
           <h2>이 전술을 깨려면 (카운터)</h2>
           <div className="chips">
             {counters.map((c) => (
-              <a key={c.id} className="chip chip--link" href={`#/t/${c.id}`}>
+              <a
+                key={c.id}
+                className="chip chip--link"
+                href={`#/t/${c.id}`}
+                onClick={() => track('counter_click', { from: tactic.id, to: c.id })}
+              >
                 {c.name} →
               </a>
             ))}
@@ -105,7 +124,9 @@ export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: P
           <h2>대표 팀</h2>
           <div className="chips">
             {tactic.famousTeams.map((t) => (
-              <span key={t} className="chip">{t}</span>
+              <span key={t} className="chip">
+                {t}
+              </span>
             ))}
           </div>
         </section>

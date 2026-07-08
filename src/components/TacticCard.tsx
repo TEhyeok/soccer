@@ -16,7 +16,9 @@ export default function TacticCard({ tactic, isFavorite, onToggleFavorite }: Pro
       </a>
       <div className="card__body">
         <div className="card__top">
-          <span className={`badge badge--${tactic.category}`}>{CATEGORY_LABELS[tactic.category]}</span>
+          <span className={`badge badge--${tactic.category}`}>
+            {CATEGORY_LABELS[tactic.category]}
+          </span>
           <span className="badge badge--diff">{DIFFICULTY_LABELS[tactic.difficulty]}</span>
           <button
             className={isFavorite ? 'fav fav--on' : 'fav'}

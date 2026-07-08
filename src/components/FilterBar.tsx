@@ -1,12 +1,6 @@
 import type { Category } from '../types';
 import { CATEGORY_LABELS } from '../types';
-
-export interface Filters {
-  query: string;
-  category: Category | 'all';
-  difficulty: number | 0;
-  favoritesOnly: boolean;
-}
+import type { Filters } from '../lib/filterTactics';
 
 interface Props {
   filters: Filters;
@@ -14,7 +8,14 @@ interface Props {
   resultCount: number;
 }
 
-const CATEGORIES: Array<Category | 'all'> = ['all', 'formation', 'attack', 'defense', 'pressing', 'setpiece'];
+const CATEGORIES: Array<Category | 'all'> = [
+  'all',
+  'formation',
+  'attack',
+  'defense',
+  'pressing',
+  'setpiece',
+];
 
 export default function FilterBar({ filters, onChange, resultCount }: Props) {
   return (

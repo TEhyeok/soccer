@@ -1,35 +1,42 @@
-import { useMemo, useState } from 'react';
-import FilterBar, { type Filters } from './components/FilterBar';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import FilterBar from './components/FilterBar';
 import TacticCard from './components/TacticCard';
 import TacticDetail from './components/TacticDetail';
-import { getTactic, TACTICS } from './data/tactics';
+import { getTactic, TACTICS } from './data';
 import { useFavorites, useHashRoute } from './hooks';
-
-const INITIAL_FILTERS: Filters = {
-  query: '',
-  category: 'all',
-  difficulty: 0,
-  favoritesOnly: false,
-};
+import { track } from './lib/analytics';
+import { filterTactics, INITIAL_FILTERS, type Filters } from './lib/filterTactics';
+import { FEEDBACK_EMAIL } from './config';
 
 export default function App() {
   const route = useHashRoute();
   const { favorites, toggle } = useFavorites();
   const [filters, setFilters] = useState<Filters>(INITIAL_FILTERS);
 
-  const filtered = useMemo(() => {
-    const q = filters.query.trim().toLowerCase();
-    return TACTICS.filter((t) => {
-      if (filters.category !== 'all' && t.category !== filters.category) return false;
-      if (filters.difficulty !== 0 && t.difficulty !== filters.difficulty) return false;
-      if (filters.favoritesOnly && !favorites.has(t.id)) return false;
-      if (!q) return true;
-      const haystack = [t.name, t.nameEn, t.summary, ...t.tags].join(' ').toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [filters, favorites]);
+  const filtered = useMemo(() => filterTactics(TACTICS, filters, favorites), [filters, favorites]);
 
   const detail = route[0] === 't' && route[1] ? getTactic(route[1]) : undefined;
+
+  // 계측: 페이지뷰 + 전술 상세 진입 (docs/EVENTS.md)
+  useEffect(() => {
+    track('pageview');
+    if (detail) track('tactic_view', { tactic: detail.id });
+  }, [route, detail]);
+
+  // 계측: 검색어 입력 (800ms 디바운스)
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => {
+    const q = filters.query.trim();
+    if (!q) return;
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => track('search', { query: q.slice(0, 50) }), 800);
+    return () => clearTimeout(searchTimer.current);
+  }, [filters.query]);
+
+  const toggleFavorite = (id: string) => {
+    track('favorite_toggle', { tactic: id, on: favorites.has(id) ? 0 : 1 });
+    toggle(id);
+  };
 
   return (
     <div className="app">
@@ -49,12 +56,14 @@ export default function App() {
             key={detail.id}
             tactic={detail}
             isFavorite={favorites.has(detail.id)}
-            onToggleFavorite={toggle}
+            onToggleFavorite={toggleFavorite}
           />
         ) : route[0] === 't' ? (
           <div className="empty">
             <p>전술을 찾을 수 없습니다.</p>
-            <a href="#/" className="chip chip--link">← 라이브러리로</a>
+            <a href="#/" className="chip chip--link">
+              ← 라이브러리로
+            </a>
           </div>
         ) : (
           <>
@@ -73,7 +82,7 @@ export default function App() {
                     key={t.id}
                     tactic={t}
                     isFavorite={favorites.has(t.id)}
-                    onToggleFavorite={toggle}
+                    onToggleFavorite={toggleFavorite}
                   />
                 ))}
               </div>
@@ -83,7 +92,15 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        <p>택틱북 v1.0 — 포메이션 · 공격 · 수비 · 압박 · 세트피스 {TACTICS.length}종</p>
+        <p>
+          택틱북 v{__APP_VERSION__} — 포메이션 · 공격 · 수비 · 압박 · 세트피스 {TACTICS.length}종
+        </p>
+        <p>
+          <a href={`mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent('[택틱북] 피드백')}`}>
+            피드백 보내기
+          </a>{' '}
+          — 전술 내용 오류 제보를 가장 먼저 처리합니다
+        </p>
       </footer>
     </div>
   );

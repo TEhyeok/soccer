@@ -94,8 +94,12 @@ export default function PitchBoard({ board, mini = false, title }: Props) {
         <rect x={PAD + (W - 18.3) / 2} y={PAD} width="18.3" height="5.5" />
         <rect x={PAD + (W - 40.3) / 2} y={PAD + H - 16.5} width="40.3" height="16.5" />
         <rect x={PAD + (W - 18.3) / 2} y={PAD + H - 5.5} width="18.3" height="5.5" />
-        <path d={`M ${PAD + W / 2 - 7.3} ${PAD + 16.5} A 9.15 9.15 0 0 0 ${PAD + W / 2 + 7.3} ${PAD + 16.5}`} />
-        <path d={`M ${PAD + W / 2 - 7.3} ${PAD + H - 16.5} A 9.15 9.15 0 0 1 ${PAD + W / 2 + 7.3} ${PAD + H - 16.5}`} />
+        <path
+          d={`M ${PAD + W / 2 - 7.3} ${PAD + 16.5} A 9.15 9.15 0 0 0 ${PAD + W / 2 + 7.3} ${PAD + 16.5}`}
+        />
+        <path
+          d={`M ${PAD + W / 2 - 7.3} ${PAD + H - 16.5} A 9.15 9.15 0 0 1 ${PAD + W / 2 + 7.3} ${PAD + H - 16.5}`}
+        />
       </g>
       <g fill={line}>
         <circle cx={PAD + W / 2} cy={PAD + H / 2} r="0.7" />
@@ -119,13 +123,27 @@ export default function PitchBoard({ board, mini = false, title }: Props) {
       ))}
 
       {/* 상대 팀 */}
-      {board.opponents?.map((p, i) => {
+      {board.opponents?.map((p) => {
         const c = px(p);
         return (
-          <g key={`o${i}`} opacity="0.85">
-            <circle cx={c.x} cy={c.y} r={r * 0.9} fill="var(--opp-fill)" stroke="var(--opp-stroke)" strokeWidth="0.4" />
+          <g key={p.id} opacity="0.85">
+            <circle
+              cx={c.x}
+              cy={c.y}
+              r={r * 0.9}
+              fill="var(--opp-fill)"
+              stroke="var(--opp-stroke)"
+              strokeWidth="0.4"
+            />
             {!mini && (
-              <text x={c.x} y={c.y + 1.1} textAnchor="middle" fontSize="2.6" fill="var(--opp-text)" fontWeight="700">
+              <text
+                x={c.x}
+                y={c.y + 1.1}
+                textAnchor="middle"
+                fontSize="2.6"
+                fill="var(--opp-text)"
+                fontWeight="700"
+              >
                 {p.role}
               </text>
             )}
@@ -134,11 +152,18 @@ export default function PitchBoard({ board, mini = false, title }: Props) {
       })}
 
       {/* 우리 팀 */}
-      {board.players.map((p, i) => {
+      {board.players.map((p) => {
         const c = px(p);
         return (
-          <g key={`p${i}`}>
-            <circle cx={c.x} cy={c.y} r={r} fill="var(--team-fill)" stroke="var(--team-stroke)" strokeWidth="0.45" />
+          <g key={p.id}>
+            <circle
+              cx={c.x}
+              cy={c.y}
+              r={r}
+              fill="var(--team-fill)"
+              stroke="var(--team-stroke)"
+              strokeWidth="0.45"
+            />
             <text
               x={c.x}
               y={c.y + 1.1}
@@ -154,15 +179,16 @@ export default function PitchBoard({ board, mini = false, title }: Props) {
       })}
 
       {/* 공 */}
-      {board.ball && (() => {
-        const c = px(board.ball);
-        return (
-          <g>
-            <circle cx={c.x} cy={c.y} r="1.5" fill="#fff" stroke="#1a1a1a" strokeWidth="0.35" />
-            <circle cx={c.x} cy={c.y} r="0.55" fill="#1a1a1a" />
-          </g>
-        );
-      })()}
+      {board.ball &&
+        (() => {
+          const c = px(board.ball);
+          return (
+            <g>
+              <circle cx={c.x} cy={c.y} r="1.5" fill="#fff" stroke="#1a1a1a" strokeWidth="0.35" />
+              <circle cx={c.x} cy={c.y} r="0.55" fill="#1a1a1a" />
+            </g>
+          );
+        })()}
     </svg>
   );
 }
