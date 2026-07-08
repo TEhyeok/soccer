@@ -38,9 +38,9 @@
 
 - **결정**: 무개발자 2인 팀에서 자체 서버는 운영 부채 — Supabase 채택. 조건: RLS 정책 테스트(허용+거부 각 1건 이상)를 CI에 강제. 데이터 접근은 모듈 1개로 모으는 얇은 추상화까지만(과설계 금지).
 
-## ADR-008 — 3D 렌더링 스택: three.js WebGPU + WebGL2 폴백 ✅
+## ADR-008 — 3D 렌더링 스택: three.js (클래식 WebGLRenderer) ✅ (스파이크 실측으로 개정)
 
-- **맥락**: "피파 전술 화면" 룩의 3D 보기 요구. WebGPU는 Chrome·Firefox·Safari(iOS 26+)에서 기본 지원 임계점 도달, three.js r171+가 WebGL2 자동 폴백 제공.
-- **결정**: three.js(WebGPURenderer, WebGL2 자동 폴백). **옵션 모드 · 뷰어 전용 · lazy-load** — 기본 번들 불변(gzip 90KB 게이트 유지), 편집은 2D 유지. 게임엔진 WASM export(20~50MB)·네이티브 앱 기각.
+- **맥락**: "피파 전술 화면" 룩의 3D 보기 요구. 당초 WebGPURenderer+WebGL2 폴백을 선택했으나, v1.1-E4 스파이크 실측(docs/SPIKE-3D.md)에서 **클래식 WebGLRenderer가 청크 37% 작고(216→136KB gzip) 폴백 경로 fps가 3배 이상**(소프트웨어 렌더링 19→61fps)으로 나왔다. 캡슐 수준의 씬에서 WebGPU의 이점이 없다.
+- **결정(개정)**: three.js **클래식 WebGLRenderer** 채택. WebGPU 전환은 캐릭터 모델 등 무거운 씬이 들어오는 시점에 재평가(전환 비용은 렌더러 생성부 교체 수준 — 보간·씬 코드는 무관). **옵션 모드 · 뷰어 전용 · lazy-load** 원칙 유지 — 기본 번들 불변(gzip 90KB 게이트), 편집은 2D 유지. 게임엔진 WASM export(20~50MB)·네이티브 앱 기각.
 - **에셋 정책**: CC0(Quaternius 등) + Mixamo만 사용. **상용 게임 립(rip) 에셋은 CC 표기가 있어도 무효 — 절대 금지.** 실존 구단 유니폼·엠블럼·선수 얼굴 재현 금지(상표권·초상권).
 - **검증**: v1.1 말 스파이크에서 중저가 안드로이드 실기기 30fps + 청크 예산 실측 → v1.1.5 착수 게이트.

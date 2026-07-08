@@ -1,12 +1,14 @@
 /**
  * 3D 전술 보드 스파이크 (v1.1-E4, ADR-008 검증용 PoC).
- * - three.js WebGPURenderer + WebGL2 자동 폴백
+ * - 클래식 WebGLRenderer 채택 — 스파이크 실측에서 WebGPURenderer 대비
+ *   청크 37% 감소(216→136KB gzip), 소프트웨어 렌더링 fps 19→61 (SPIKE-3D.md).
+ *   WebGPU 전환은 캐릭터 모델 등 무거운 씬 도입 시 재평가.
  * - 선수 22명 InstancedMesh(팀당 1 draw call), 베이크 조명 없음/실시간 그림자 금지
  * - steps 재생은 2D와 동일한 lib/playback 순수 함수를 재사용 (렌더러 독립 설계 증명)
  * - lazy-load 전용: App에서 React.lazy로만 임포트 — 기본 번들에 포함 금지
  */
 import { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three/webgpu';
+import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { Tactic } from '../types';
 import { buildFrames, easeInOut, interpolateFrames, type Frame } from '../lib/playback';
@@ -139,7 +141,7 @@ export default function Board3D({ tactic }: Props) {
     };
     applyFrame(frames[0]);
 
-    const renderer = new THREE.WebGPURenderer({ antialias: true });
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // 품질 티어: 상한 1.5
 
     const resize = () => {
@@ -156,8 +158,7 @@ export default function Board3D({ tactic }: Props) {
     const STEP_MS = 1600;
     let lastTick = 0;
 
-    renderer
-      .init()
+    Promise.resolve()
       .then(() => {
         if (disposed) return;
         mount.appendChild(renderer.domElement);
@@ -172,8 +173,7 @@ export default function Board3D({ tactic }: Props) {
         controls.enableDamping = true;
         controlsRef.current = controls;
 
-        const backendType = (renderer.backend as { isWebGPUBackend?: boolean }).isWebGPUBackend;
-        setBackend(backendType ? 'WebGPU' : 'WebGL2 (폴백)');
+        setBackend('WebGL2 (클래식)');
         setStatus('ready');
 
         const loop = (now: number) => {
