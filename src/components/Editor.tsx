@@ -8,6 +8,7 @@ import {
   loadDraft,
   newCustomId,
   saveDraft,
+  storageAvailable,
   upsertCustomTactic,
   type Draft,
 } from '../lib/customTactics';
@@ -23,6 +24,15 @@ const TOOLS: Array<{ key: Tool; label: string }> = [
   { key: 'press', label: '압박 화살표' },
   { key: 'ball', label: '⚽ 공 놓기' },
 ];
+
+/** 도구별 사용법 힌트 (UX 감사 ①) */
+const TOOL_HINTS: Record<Tool, string> = {
+  move: '선수를 끌어서 옮기고, 탭하면 선택됩니다',
+  run: '시작점 → 끝점으로 드래그해 이동 경로(실선)를 그립니다',
+  pass: '시작점 → 끝점으로 드래그해 패스(점선)를 그립니다',
+  press: '시작점 → 끝점으로 드래그해 압박 방향(적색)을 그립니다',
+  ball: '보드를 탭한 자리에 공이 놓입니다',
+};
 
 const EMPTY_BOARD: Board = { players: [] };
 
@@ -71,6 +81,9 @@ export default function Editor({ editingId }: Props) {
   const [tempArrow, setTempArrow] = useState<Arrow | null>(null);
   const [history, setHistory] = useState<Board[]>([]);
   const [shareBusy, setShareBusy] = useState(false);
+  // 작성 중이던 보드를 복원해서 열었는지 (UX 감사 ③ — 안내 배너)
+  const [restored, setRestored] = useState(() => !editingId && loadDraft() !== null);
+  const canStore = useMemo(storageAvailable, []);
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<{ kind: 'player' | 'arrow' | null; id?: string; moved: boolean }>({
     kind: null,
@@ -207,7 +220,10 @@ export default function Editor({ editingId }: Props) {
   // ── 팔레트 동작 ──
   const addPlayer = (opponent: boolean) => {
     const id = `${opponent ? 'o-p' : 'p'}${counter.current++}${Date.now() % 1000}`;
-    const p: PlayerPos = { id, role: opponent ? '' : 'P', x: 50, y: opponent ? 60 : 40 };
+    // 겹침 방지: 추가 순서에 따라 가로 위치를 흩뿌린다 (UX 감사 ②)
+    const n = opponent ? (board.opponents?.length ?? 0) : board.players.length;
+    const x = 20 + ((n * 13) % 61);
+    const p: PlayerPos = { id, role: opponent ? '' : 'P', x, y: opponent ? 60 : 40 };
     setBoard(
       opponent
         ? { ...board, opponents: [...(board.opponents ?? []), p] }
@@ -294,6 +310,20 @@ export default function Editor({ editingId }: Props) {
         )}
       </div>
 
+      {restored && (
+        <p className="editor__notice">
+          임시저장된 보드를 열었습니다 (자동 저장 중) — 새로 시작하려면 아래 '버리고 새로 시작'
+          <button className="editor__notice-x" onClick={() => setRestored(false)} aria-label="닫기">
+            ✕
+          </button>
+        </p>
+      )}
+      {!canStore && (
+        <p className="editor__notice editor__notice--warn">
+          이 환경에서는 저장이 유지되지 않을 수 있습니다 — 이미지 공유는 정상 동작합니다
+        </p>
+      )}
+
       <div className="editor__tools" role="toolbar" aria-label="편집 도구">
         {TOOLS.map((t) => (
           <button
@@ -305,6 +335,7 @@ export default function Editor({ editingId }: Props) {
           </button>
         ))}
       </div>
+      <p className="editor__hint">{TOOL_HINTS[tool]}</p>
 
       <div className="editor__board">
         <PitchBoard
@@ -338,9 +369,17 @@ export default function Editor({ editingId }: Props) {
           ↩ 되돌리기
         </button>
         {(board.arrows?.length ?? 0) > 0 && (
-          <button className="chip" onClick={() => setBoard({ ...board, arrows: [] })}>
-            화살표 비우기
-          </button>
+          <>
+            <button
+              className="chip"
+              onClick={() => setBoard({ ...board, arrows: board.arrows?.slice(0, -1) })}
+            >
+              화살표 하나 지우기
+            </button>
+            <button className="chip" onClick={() => setBoard({ ...board, arrows: [] })}>
+              화살표 비우기
+            </button>
+          </>
         )}
       </div>
 

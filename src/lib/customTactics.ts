@@ -23,6 +23,18 @@ const KEY = 'tacticbook:custom-tactics';
 const DRAFT_KEY = 'tacticbook:editor-draft';
 export const MAX_ITEMS = 50;
 
+/** 저장 가능 여부 — 샌드박스 iframe(시뮬레이터 아티팩트 등)에선 localStorage가 막힐 수 있다 */
+export function storageAvailable(): boolean {
+  try {
+    const k = '__tacticbook_probe__';
+    localStorage.setItem(k, '1');
+    localStorage.removeItem(k);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export interface Draft {
   name: string;
   board: Board;
