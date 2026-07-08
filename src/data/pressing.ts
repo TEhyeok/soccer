@@ -1,6 +1,5 @@
 // 압박·전환 전술 데이터 (스키마 v2 — 선수 id 포함, ADR-001)
-// 초기 버전은 scripts/migrate-board-ids.ts 로 생성. 이후 이 파일을 직접 편집한다.
-// 표기 규칙: docs/CONTENT_GUIDE.md
+// 표기 규칙: docs/CONTENT_GUIDE.md — 데이터 일괄 변경은 scripts/ 코드젠으로만
 import type { Tactic } from '../types';
 
 export const PRESSING_TACTICS: Tactic[] = [
@@ -34,7 +33,7 @@ export const PRESSING_TACTICS: Tactic[] = [
       '5초 룰: 되빼앗기 실패 시 즉시 블록 수비 전환',
       '후방 라인도 함께 전진 — 압박과 라인업은 한 몸',
     ],
-    counters: ['a-longball', 'f532'],
+    counters: ['a-longball', 'f532', 'bu-switch'],
     famousTeams: ['도르트문트·리버풀 (클롭)', 'RB 라이프치히', '바이에른 뮌헨 (플릭)'],
     tags: ['압박', '전환', '카운터프레스', '5초룰'],
     board: {
@@ -404,7 +403,7 @@ export const PRESSING_TACTICS: Tactic[] = [
       '상대 골킥 = 압박 대형 세팅 신호',
       '벗겨졌을 때의 리커버리 스프린트 약속 (전원 후퇴 20초)',
     ],
-    counters: ['a-longball', 'a-counter'],
+    counters: ['a-longball', 'a-counter', 'bu-lavolpiana'],
     famousTeams: ['맨체스터 시티 (과르디올라)', '리즈 유나이티드 (비엘사)', '리버풀 (클롭)'],
     tags: ['전방압박', '빌드업차단', '측면함정', '주도권'],
     board: {

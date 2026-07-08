@@ -1,6 +1,5 @@
 // 포메이션 전술 데이터 (스키마 v2 — 선수 id 포함, ADR-001)
-// 초기 버전은 scripts/migrate-board-ids.ts 로 생성. 이후 이 파일을 직접 편집한다.
-// 표기 규칙: docs/CONTENT_GUIDE.md
+// 표기 규칙: docs/CONTENT_GUIDE.md — 데이터 일괄 변경은 scripts/ 코드젠으로만
 import type { Tactic } from '../types';
 
 export const FORMATION_TACTICS: Tactic[] = [
@@ -188,7 +187,7 @@ export const FORMATION_TACTICS: Tactic[] = [
       '측면 미드필더는 수비 시 풀백 앞까지 내려와 4-4 블록 완성',
       '공수 전환 시 투톱을 향한 빠른 전진 패스',
     ],
-    counters: ['f4231', 'a-tikitaka'],
+    counters: ['f4231', 'a-tikitaka', 'a-false9'],
     famousTeams: [
       '맨체스터 유나이티드 (퍼거슨)',
       '아틀레티코 마드리드 (시메오네)',

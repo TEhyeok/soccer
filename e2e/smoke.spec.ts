@@ -3,11 +3,14 @@
  * desktop/mobile 두 프로젝트로 실행된다 (playwright.config.ts).
  */
 import { expect, test } from '@playwright/test';
+import { TACTICS } from '../src/data';
 
-test('스토리 1: 홈에서 전체 전술 20종을 카드로 훑어볼 수 있다', async ({ page }) => {
+const TOTAL = TACTICS.length;
+
+test(`스토리 1: 홈에서 전체 전술 ${TOTAL}종을 카드로 훑어볼 수 있다`, async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('.card')).toHaveCount(20);
-  await expect(page.locator('.filters__count')).toHaveText('20개');
+  await expect(page.locator('.card')).toHaveCount(TOTAL);
+  await expect(page.locator('.filters__count')).toHaveText(`${TOTAL}개`);
 });
 
 test('스토리 2: 검색으로 3탭 이내에 상세 도달 — 게겐프레싱', async ({ page }) => {
@@ -56,5 +59,16 @@ test('404 폴백: 없는 전술 id는 안내와 복귀 링크를 보여준다', 
   await page.goto('/#/t/no-such-tactic');
   await expect(page.locator('.empty')).toContainText('전술을 찾을 수 없습니다');
   await page.locator('.empty .chip--link').click();
-  await expect(page.locator('.card')).toHaveCount(20);
+  await expect(page.locator('.card')).toHaveCount(TOTAL);
+});
+
+test('v1.1: 빌드업·전개 카테고리 필터와 시퀀스 재생 컨트롤이 동작한다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('tab', { name: '빌드업·전개' }).click();
+  await expect(page.locator('.card')).toHaveCount(4);
+
+  await page.goto('/#/t/p-gegen');
+  await expect(page.locator('.playback__controls')).toBeVisible();
+  await page.getByRole('button', { name: '다음 단계' }).click();
+  await expect(page.locator('.playback__stepnum')).toHaveText('1/3');
 });

@@ -1,5 +1,6 @@
 import type { Tactic } from '../types';
 import { FORMATION_TACTICS } from './formations';
+import { BUILDUP_TACTICS } from './buildup';
 import { ATTACK_TACTICS } from './attack';
 import { DEFENSE_TACTICS } from './defense';
 import { PRESSING_TACTICS } from './pressing';
@@ -8,6 +9,7 @@ import { validateTactics } from './validate';
 
 export const TACTICS: Tactic[] = [
   ...FORMATION_TACTICS,
+  ...BUILDUP_TACTICS,
   ...ATTACK_TACTICS,
   ...DEFENSE_TACTICS,
   ...PRESSING_TACTICS,

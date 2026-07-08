@@ -317,6 +317,7 @@ const SEQUENCES: Record<string, Step[]> = {
 
 const FILES: Record<Category, { file: string; constName: string; label: string }> = {
   formation: { file: 'formations.ts', constName: 'FORMATION_TACTICS', label: '포메이션' },
+  buildup: { file: 'buildup.ts', constName: 'BUILDUP_TACTICS', label: '빌드업·전개' },
   attack: { file: 'attack.ts', constName: 'ATTACK_TACTICS', label: '공격 전술' },
   defense: { file: 'defense.ts', constName: 'DEFENSE_TACTICS', label: '수비 전술' },
   pressing: { file: 'pressing.ts', constName: 'PRESSING_TACTICS', label: '압박·전환' },

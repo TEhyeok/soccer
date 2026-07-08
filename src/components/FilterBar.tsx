@@ -11,6 +11,7 @@ interface Props {
 const CATEGORIES: Array<Category | 'all'> = [
   'all',
   'formation',
+  'buildup',
   'attack',
   'defense',
   'pressing',

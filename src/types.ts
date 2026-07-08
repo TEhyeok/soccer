@@ -1,7 +1,8 @@
-export type Category = 'formation' | 'attack' | 'defense' | 'pressing' | 'setpiece';
+export type Category = 'formation' | 'buildup' | 'attack' | 'defense' | 'pressing' | 'setpiece';
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   formation: '포메이션',
+  buildup: '빌드업·전개',
   attack: '공격 전술',
   defense: '수비 전술',
   pressing: '압박·전환',
