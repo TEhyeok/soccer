@@ -204,6 +204,174 @@ export const PRESSING_TACTICS: Tactic[] = [
         x: 45,
         y: 67,
       },
+      steps: [
+        {
+          caption: '공을 잃은 순간 — 가장 가까운 3명이 공·패스길·리시버를 분담해 즉시 달려든다',
+          positions: {
+            st: {
+              x: 48,
+              y: 72,
+            },
+            cm1: {
+              x: 41,
+              y: 67,
+            },
+            lw: {
+              x: 28,
+              y: 68,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 52,
+                y: 80,
+              },
+              to: {
+                x: 48,
+                y: 73,
+              },
+              kind: 'press',
+              subjectId: 'st',
+            },
+            {
+              from: {
+                x: 33,
+                y: 62,
+              },
+              to: {
+                x: 40,
+                y: 66,
+              },
+              kind: 'press',
+              subjectId: 'cm1',
+            },
+            {
+              from: {
+                x: 22,
+                y: 76,
+              },
+              to: {
+                x: 28,
+                y: 69,
+              },
+              kind: 'press',
+              subjectId: 'lw',
+            },
+          ],
+          ball: {
+            x: 45,
+            y: 67,
+          },
+        },
+        {
+          caption: '후방 라인도 함께 전진 — 압박과 라인업은 한 몸, 압박 뒤 공간을 없앤다',
+          positions: {
+            cb1: {
+              x: 40,
+              y: 42,
+            },
+            cb2: {
+              x: 62,
+              y: 42,
+            },
+            lb: {
+              x: 22,
+              y: 45,
+            },
+            rb: {
+              x: 80,
+              y: 45,
+            },
+            dm: {
+              x: 50,
+              y: 58,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 40,
+                y: 33,
+              },
+              to: {
+                x: 40,
+                y: 41,
+              },
+              kind: 'run',
+              subjectId: 'cb1',
+            },
+            {
+              from: {
+                x: 62,
+                y: 33,
+              },
+              to: {
+                x: 62,
+                y: 41,
+              },
+              kind: 'run',
+              subjectId: 'cb2',
+            },
+            {
+              from: {
+                x: 50,
+                y: 52,
+              },
+              to: {
+                x: 50,
+                y: 57,
+              },
+              kind: 'run',
+              subjectId: 'dm',
+            },
+          ],
+        },
+        {
+          caption: '5초 안에 되빼앗았다 — 흐트러진 상대 수비를 곧바로 찌른다 (최상급 찬스)',
+          positions: {
+            st: {
+              x: 50,
+              y: 76,
+            },
+            rw: {
+              x: 72,
+              y: 86,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 82,
+                y: 76,
+              },
+              to: {
+                x: 73,
+                y: 85,
+              },
+              kind: 'run',
+              subjectId: 'rw',
+            },
+            {
+              from: {
+                x: 49,
+                y: 74,
+              },
+              to: {
+                x: 68,
+                y: 84,
+              },
+              kind: 'pass',
+              subjectId: 'st',
+              curve: -0.15,
+            },
+          ],
+          ball: {
+            x: 49,
+            y: 73,
+          },
+        },
+      ],
     },
   },
   {
@@ -407,6 +575,166 @@ export const PRESSING_TACTICS: Tactic[] = [
         x: 32,
         y: 73,
       },
+      steps: [
+        {
+          caption: '압박 세팅 — ST가 커버 섀도로 앵커를 지우며 호(arc)를 그려 접근',
+          positions: {
+            st: {
+              x: 36,
+              y: 68,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 40,
+                y: 60,
+              },
+              to: {
+                x: 35,
+                y: 68,
+              },
+              kind: 'press',
+              subjectId: 'st',
+              curve: 0.2,
+            },
+          ],
+        },
+        {
+          caption: '측면 함정으로 유도 — 중앙이 막힌 공은 계획된 측면으로 흐른다',
+          positions: {
+            lw: {
+              x: 14,
+              y: 62,
+            },
+            cm1: {
+              x: 28,
+              y: 54,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 32,
+                y: 73,
+              },
+              to: {
+                x: 14,
+                y: 68,
+              },
+              kind: 'pass',
+              subjectId: 'o-cb1',
+            },
+            {
+              from: {
+                x: 18,
+                y: 56,
+              },
+              to: {
+                x: 14,
+                y: 61,
+              },
+              kind: 'press',
+              subjectId: 'lw',
+            },
+          ],
+          ball: {
+            x: 14,
+            y: 67,
+          },
+        },
+        {
+          caption: '함정 닫기 — 터치라인을 수비수 삼아 3인 포위, 패스길은 모두 등 뒤로',
+          positions: {
+            st: {
+              x: 24,
+              y: 70,
+            },
+            cm1: {
+              x: 20,
+              y: 60,
+            },
+            dm: {
+              x: 40,
+              y: 48,
+            },
+            lw: {
+              x: 13,
+              y: 65,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 36,
+                y: 68,
+              },
+              to: {
+                x: 25,
+                y: 70,
+              },
+              kind: 'press',
+              subjectId: 'st',
+            },
+            {
+              from: {
+                x: 28,
+                y: 54,
+              },
+              to: {
+                x: 21,
+                y: 60,
+              },
+              kind: 'press',
+              subjectId: 'cm1',
+            },
+          ],
+        },
+        {
+          caption: '상대 진영 탈취 — 골문까지 최단 거리, 즉시 결정적 찬스',
+          positions: {
+            rw: {
+              x: 60,
+              y: 78,
+            },
+            st: {
+              x: 30,
+              y: 76,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 66,
+                y: 62,
+              },
+              to: {
+                x: 60,
+                y: 77,
+              },
+              kind: 'run',
+              subjectId: 'rw',
+            },
+            {
+              from: {
+                x: 22,
+                y: 70,
+              },
+              to: {
+                x: 55,
+                y: 80,
+              },
+              kind: 'pass',
+              subjectId: 'st',
+              curve: -0.15,
+            },
+          ],
+          ball: {
+            x: 22,
+            y: 69,
+          },
+        },
+      ],
     },
   },
   {

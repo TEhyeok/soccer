@@ -58,6 +58,26 @@ export function validateTactics(tactics: readonly Tactic[]): string[] {
     if (t.board.ball && (!inRange(t.board.ball.x) || !inRange(t.board.ball.y))) {
       at('ball 좌표 범위 밖');
     }
+
+    // steps 검증 (ADR-002): positions 키는 실존 선수 id, 좌표·화살표 규칙은 보드와 동일
+    for (const [si, step] of (t.board.steps ?? []).entries()) {
+      if (!step.caption.trim()) at(`step ${si} caption 비어 있음`);
+      for (const [pid, pos] of Object.entries(step.positions ?? {})) {
+        if (!boardIds.has(pid)) at(`step ${si} positions 참조 오류: ${pid}`);
+        if (!inRange(pos.x) || !inRange(pos.y)) at(`step ${si} ${pid} 좌표 범위 밖`);
+      }
+      for (const [ai, a] of (step.arrows ?? []).entries()) {
+        for (const pt of [a.from, a.to]) {
+          if (!inRange(pt.x) || !inRange(pt.y)) at(`step ${si} 화살표 ${ai} 좌표 범위 밖`);
+        }
+        if (a.subjectId && !boardIds.has(a.subjectId)) {
+          at(`step ${si} 화살표 ${ai} subjectId 참조 오류: ${a.subjectId}`);
+        }
+      }
+      if (step.ball && (!inRange(step.ball.x) || !inRange(step.ball.y))) {
+        at(`step ${si} ball 좌표 범위 밖`);
+      }
+    }
   }
 
   // counters 참조 무결성 (전체 id 집합 확정 후 검사)

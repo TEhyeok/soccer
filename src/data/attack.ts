@@ -185,6 +185,198 @@ export const ATTACK_TACTICS: Tactic[] = [
         x: 30,
         y: 24,
       },
+      steps: [
+        {
+          caption: '후방 삼각형 — 골키퍼까지 참여해 상대 1선 압박을 유인한다',
+          positions: {
+            dm: {
+              x: 47,
+              y: 34,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 30,
+                y: 24,
+              },
+              to: {
+                x: 45,
+                y: 32,
+              },
+              kind: 'pass',
+              subjectId: 'cb1',
+            },
+            {
+              from: {
+                x: 30,
+                y: 22,
+              },
+              to: {
+                x: 14,
+                y: 36,
+              },
+              kind: 'pass',
+              subjectId: 'cb1',
+            },
+          ],
+          ball: {
+            x: 47,
+            y: 33,
+          },
+        },
+        {
+          caption: '왼쪽 과부하 — 짧은 패스로 상대 블록을 한쪽으로 모은다',
+          positions: {
+            lb: {
+              x: 12,
+              y: 48,
+            },
+            lw: {
+              x: 18,
+              y: 60,
+            },
+            cm1: {
+              x: 28,
+              y: 52,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 47,
+                y: 34,
+              },
+              to: {
+                x: 29,
+                y: 51,
+              },
+              kind: 'pass',
+              subjectId: 'dm',
+            },
+            {
+              from: {
+                x: 28,
+                y: 52,
+              },
+              to: {
+                x: 13,
+                y: 47,
+              },
+              kind: 'pass',
+              subjectId: 'cm1',
+            },
+          ],
+          ball: {
+            x: 14,
+            y: 47,
+          },
+        },
+        {
+          caption: '스위칭 — 상대가 쏠린 순간 반대편으로 크게 전환, 오른쪽 1대1 상황',
+          positions: {
+            rw: {
+              x: 86,
+              y: 72,
+            },
+            rb: {
+              x: 88,
+              y: 55,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 14,
+                y: 48,
+              },
+              to: {
+                x: 84,
+                y: 70,
+              },
+              kind: 'pass',
+              subjectId: 'lb',
+              curve: -0.2,
+            },
+            {
+              from: {
+                x: 88,
+                y: 38,
+              },
+              to: {
+                x: 88,
+                y: 54,
+              },
+              kind: 'run',
+              subjectId: 'rb',
+            },
+          ],
+          ball: {
+            x: 85,
+            y: 70,
+          },
+        },
+        {
+          caption: '라인 사이를 부수는 마지막 패스 — 컷백으로 마무리',
+          positions: {
+            st: {
+              x: 56,
+              y: 84,
+            },
+            cm2: {
+              x: 62,
+              y: 62,
+            },
+            rw: {
+              x: 90,
+              y: 88,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 86,
+                y: 74,
+              },
+              to: {
+                x: 89,
+                y: 86,
+              },
+              kind: 'run',
+              subjectId: 'rw',
+            },
+            {
+              from: {
+                x: 90,
+                y: 89,
+              },
+              to: {
+                x: 60,
+                y: 86,
+              },
+              kind: 'pass',
+              subjectId: 'rw',
+              curve: -0.2,
+            },
+            {
+              from: {
+                x: 50,
+                y: 72,
+              },
+              to: {
+                x: 56,
+                y: 83,
+              },
+              kind: 'run',
+              subjectId: 'st',
+            },
+          ],
+          ball: {
+            x: 89,
+            y: 87,
+          },
+        },
+      ],
     },
   },
   {
@@ -384,6 +576,143 @@ export const ATTACK_TACTICS: Tactic[] = [
         x: 38,
         y: 33,
       },
+      steps: [
+        {
+          caption: '탈취 — 첫 패스는 무조건 전방, 아웃렛 스트라이커에게',
+          positions: {
+            st1: {
+              x: 42,
+              y: 54,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 38,
+                y: 33,
+              },
+              to: {
+                x: 42,
+                y: 52,
+              },
+              kind: 'pass',
+              subjectId: 'cm1',
+            },
+          ],
+          ball: {
+            x: 42,
+            y: 52,
+          },
+        },
+        {
+          caption: '3인 유닛 발진 — 운반 1명 + 침투 2명, 상대 센터백은 후퇴 중',
+          positions: {
+            st1: {
+              x: 48,
+              y: 64,
+            },
+            st2: {
+              x: 72,
+              y: 78,
+            },
+            rm: {
+              x: 82,
+              y: 60,
+            },
+            'o-cb1': {
+              x: 44,
+              y: 62,
+            },
+            'o-cb2': {
+              x: 68,
+              y: 64,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 42,
+                y: 54,
+              },
+              to: {
+                x: 48,
+                y: 63,
+              },
+              kind: 'run',
+              subjectId: 'st1',
+            },
+            {
+              from: {
+                x: 60,
+                y: 52,
+              },
+              to: {
+                x: 72,
+                y: 77,
+              },
+              kind: 'run',
+              subjectId: 'st2',
+              curve: -0.15,
+            },
+            {
+              from: {
+                x: 86,
+                y: 34,
+              },
+              to: {
+                x: 82,
+                y: 58,
+              },
+              kind: 'run',
+              subjectId: 'rm',
+            },
+          ],
+          ball: {
+            x: 48,
+            y: 62,
+          },
+        },
+        {
+          caption: '10초 안에 슈팅까지 — 뒷공간 스루패스, 골키퍼와 1대1',
+          positions: {
+            st2: {
+              x: 74,
+              y: 86,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 48,
+                y: 64,
+              },
+              to: {
+                x: 72,
+                y: 84,
+              },
+              kind: 'pass',
+              subjectId: 'st1',
+              curve: -0.1,
+            },
+            {
+              from: {
+                x: 74,
+                y: 87,
+              },
+              to: {
+                x: 55,
+                y: 96,
+              },
+              kind: 'pass',
+              subjectId: 'st2',
+            },
+          ],
+          ball: {
+            x: 73,
+            y: 85,
+          },
+        },
+      ],
     },
   },
   {

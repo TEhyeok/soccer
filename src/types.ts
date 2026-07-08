@@ -43,11 +43,30 @@ export interface Arrow {
   subjectId?: string;
 }
 
+/**
+ * 애니메이션 시퀀스 단계 (ADR-002, v1.1에서 동결).
+ * 각 단계는 직전 상태에 대한 부분 덮어쓰기 — 명시하지 않은 선수는 자리를 유지한다.
+ */
+export interface Step {
+  /** 단계 설명 캡션 (재생 UI에 표시) */
+  caption: string;
+  /** 이 단계에서 이동하는 선수: 보드 선수 id → 새 좌표 */
+  positions?: Record<string, Point>;
+  /** 이 단계 동안 표시할 화살표 (기본 보드 화살표를 대체) */
+  arrows?: Arrow[];
+  ball?: Point;
+}
+
 export interface Board {
   players: PlayerPos[];
   opponents?: PlayerPos[];
   arrows?: Arrow[];
   ball?: Point;
+  /**
+   * 애니메이션 시퀀스 (optional, ADR-002).
+   * 없으면 기존과 동일한 정적 보드 — "1단계짜리 시퀀스"로 해석된다.
+   */
+  steps?: Step[];
 }
 
 export interface Tactic {

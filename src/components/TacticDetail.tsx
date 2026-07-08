@@ -3,6 +3,7 @@ import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '../types';
 import { getTactic, TACTICS } from '../data';
 import { track } from '../lib/analytics';
 import PitchBoard from './PitchBoard';
+import PlaybackBoard from './PlaybackBoard';
 
 interface Props {
   tactic: Tactic;
@@ -47,7 +48,11 @@ export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: P
       </header>
 
       <div className="detail__board">
-        <PitchBoard board={tactic.board} title={tactic.name} />
+        {tactic.board.steps?.length ? (
+          <PlaybackBoard board={tactic.board} title={tactic.name} tacticId={tactic.id} />
+        ) : (
+          <PitchBoard board={tactic.board} title={tactic.name} />
+        )}
         <div className="legend">
           <span>
             <i className="legend__line legend__line--run" /> 선수 이동

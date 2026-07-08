@@ -536,6 +536,140 @@ export const DEFENSE_TACTICS: Tactic[] = [
         x: 50,
         y: 65,
       },
+      steps: [
+        {
+          caption: '트랩 신호 — 패서가 고개를 숙이고 킥 모션, 라인 컨트롤러가 스텝업 콜',
+          arrows: [
+            {
+              from: {
+                x: 50,
+                y: 64,
+              },
+              to: {
+                x: 60,
+                y: 45,
+              },
+              kind: 'pass',
+              subjectId: 'o-cm',
+              curve: 0.1,
+            },
+          ],
+        },
+        {
+          caption: '백4 동시 스텝업 — 한 걸음에 공격수 둘이 오프사이드 위치에 갇힌다',
+          positions: {
+            lb: {
+              x: 18,
+              y: 54,
+            },
+            cb1: {
+              x: 39,
+              y: 54,
+            },
+            cb2: {
+              x: 61,
+              y: 54,
+            },
+            rb: {
+              x: 82,
+              y: 54,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 18,
+                y: 46,
+              },
+              to: {
+                x: 18,
+                y: 53,
+              },
+              kind: 'run',
+              subjectId: 'lb',
+            },
+            {
+              from: {
+                x: 39,
+                y: 46,
+              },
+              to: {
+                x: 39,
+                y: 53,
+              },
+              kind: 'run',
+              subjectId: 'cb1',
+            },
+            {
+              from: {
+                x: 61,
+                y: 46,
+              },
+              to: {
+                x: 61,
+                y: 53,
+              },
+              kind: 'run',
+              subjectId: 'cb2',
+            },
+            {
+              from: {
+                x: 82,
+                y: 46,
+              },
+              to: {
+                x: 82,
+                y: 53,
+              },
+              kind: 'run',
+              subjectId: 'rb',
+            },
+          ],
+        },
+        {
+          caption: '패스가 나와도 무효 — 공격수는 이미 오프사이드, 스위퍼 키퍼가 뒷정리',
+          positions: {
+            'o-st2': {
+              x: 65,
+              y: 42,
+            },
+            gk: {
+              x: 50,
+              y: 24,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 70,
+                y: 50,
+              },
+              to: {
+                x: 66,
+                y: 43,
+              },
+              kind: 'run',
+              subjectId: 'o-st2',
+            },
+            {
+              from: {
+                x: 50,
+                y: 14,
+              },
+              to: {
+                x: 50,
+                y: 23,
+              },
+              kind: 'run',
+              subjectId: 'gk',
+            },
+          ],
+          ball: {
+            x: 58,
+            y: 40,
+          },
+        },
+      ],
     },
   },
 ];

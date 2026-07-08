@@ -188,6 +188,128 @@ export const SETPIECE_TACTICS: Tactic[] = [
         x: 96,
         y: 97,
       },
+      steps: [
+        {
+          caption: '스크린 — C가 니어 지역 마크맨의 길목을 정지 동작으로 차지한다',
+          positions: {
+            c: {
+              x: 50,
+              y: 88,
+            },
+            b: {
+              x: 46,
+              y: 88,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 38,
+                y: 86,
+              },
+              to: {
+                x: 49,
+                y: 88,
+              },
+              kind: 'run',
+              subjectId: 'c',
+            },
+          ],
+        },
+        {
+          caption: '니어 쇄도 — A가 스크린 뒤 공간으로 파고든다',
+          positions: {
+            a: {
+              x: 60,
+              y: 93,
+            },
+            d: {
+              x: 64,
+              y: 95,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 55,
+                y: 82,
+              },
+              to: {
+                x: 59,
+                y: 92,
+              },
+              kind: 'run',
+              subjectId: 'a',
+              curve: -0.15,
+            },
+          ],
+        },
+        {
+          caption: '인스윙 킥 — 니어포스트 상단을 향해 빠르고 낮게',
+          arrows: [
+            {
+              from: {
+                x: 96,
+                y: 97,
+              },
+              to: {
+                x: 62,
+                y: 94,
+              },
+              kind: 'pass',
+              subjectId: 'k',
+              curve: -0.25,
+            },
+          ],
+          ball: {
+            x: 61,
+            y: 94,
+          },
+        },
+        {
+          caption: '플릭 — 살짝 스친 헤더가 파포스트로, B가 마무리',
+          positions: {
+            b: {
+              x: 43,
+              y: 93,
+            },
+            e: {
+              x: 49,
+              y: 82,
+            },
+          },
+          arrows: [
+            {
+              from: {
+                x: 61,
+                y: 94,
+              },
+              to: {
+                x: 45,
+                y: 95,
+              },
+              kind: 'pass',
+              subjectId: 'a',
+            },
+            {
+              from: {
+                x: 46,
+                y: 88,
+              },
+              to: {
+                x: 43,
+                y: 92,
+              },
+              kind: 'run',
+              subjectId: 'b',
+            },
+          ],
+          ball: {
+            x: 44,
+            y: 94,
+          },
+        },
+      ],
     },
   },
   {

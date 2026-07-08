@@ -31,7 +31,9 @@ ${js}
 
 if (process.argv.includes('--fragment')) {
   writeFileSync('dist/single-fragment.html', body);
-  console.log(`✓ dist/single-fragment.html (${Math.round(body.length / 1024)}KB) — 아티팩트 게시용`);
+  console.log(
+    `✓ dist/single-fragment.html (${Math.round(body.length / 1024)}KB) — 아티팩트 게시용`
+  );
 } else {
   const full = `<!doctype html>
 <html lang="ko">
