@@ -652,3 +652,10 @@ body {
   font-size: 10px;
   opacity: 0.8;
 }
+
+/* ───────── 이미지 공유 (v1.2) ───────── */
+.share-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}

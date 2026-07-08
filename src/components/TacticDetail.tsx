@@ -1,7 +1,9 @@
+import { useRef, useState } from 'react';
 import type { Tactic } from '../types';
 import { CATEGORY_LABELS, DIFFICULTY_LABELS } from '../types';
 import { getTactic, TACTICS } from '../data';
 import { track } from '../lib/analytics';
+import { shareBoardImage } from '../lib/exportImage';
 import PitchBoard from './PitchBoard';
 import PlaybackBoard from './PlaybackBoard';
 
@@ -12,6 +14,22 @@ interface Props {
 }
 
 export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: Props) {
+  const boardRef = useRef<HTMLDivElement>(null);
+  const [shareState, setShareState] = useState<'idle' | 'busy' | 'done'>('idle');
+
+  const share = async () => {
+    const svg = boardRef.current?.querySelector<SVGSVGElement>('svg.pitch');
+    if (!svg || shareState === 'busy') return;
+    setShareState('busy');
+    try {
+      const method = await shareBoardImage(svg, tactic.name);
+      setShareState('done');
+      if (method === 'downloaded') setTimeout(() => setShareState('idle'), 2500);
+    } catch {
+      setShareState('idle');
+    }
+  };
+
   const counters = tactic.counters
     .map((id) => getTactic(id))
     .filter((t): t is Tactic => Boolean(t));
@@ -54,12 +72,21 @@ export default function TacticDetail({ tactic, isFavorite, onToggleFavorite }: P
         <p className="detail__summary">{tactic.summary}</p>
       </header>
 
-      <div className="detail__board">
+      <div className="detail__board" ref={boardRef}>
         {tactic.board.steps?.length ? (
           <PlaybackBoard board={tactic.board} title={tactic.name} tacticId={tactic.id} />
         ) : (
           <PitchBoard board={tactic.board} title={tactic.name} />
         )}
+        <div className="share-row">
+          <button className="chip chip--link" onClick={share} disabled={shareState === 'busy'}>
+            {shareState === 'busy'
+              ? '이미지 만드는 중…'
+              : shareState === 'done'
+                ? '✓ 저장됨 — 단톡에 붙여넣으세요'
+                : '📤 이미지로 공유'}
+          </button>
+        </div>
         <div className="legend">
           <span>
             <i className="legend__line legend__line--run" /> 선수 이동
