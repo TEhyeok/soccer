@@ -48,7 +48,9 @@ def scenario_source():
         "    builder.config().deterministic = False",
         "    builder.config().offsides = False",  # 연출 우선 — 오프사이드로 끊기지 않게
         "    builder.config().end_episode_on_score = True",
-        "    builder.config().end_episode_on_out_of_play = False",
+        # 전원 에이전트 제어라 아웃 시 스로인 던질 AI가 없음 — False면
+        # 엔진이 인플레이 복귀를 무한 대기(행). 반드시 True 유지.
+        "    builder.config().end_episode_on_out_of_play = True",
         "    builder.config().right_team_difficulty = 0.6",
         "    builder.config().left_team_difficulty = 1.0",
     ]
@@ -126,7 +128,6 @@ env = football_env.create_environment(
     number_of_right_players_agent_controls=0,
     render=False,
 )
-env.reset()
 core = env.unwrapped._env
 
 
@@ -134,10 +135,7 @@ def raw():
     return core.observation()
 
 
-traj = []
-
-
-def snap(o, step_no):
+def snap(traj, o, step_no):
     traj.append({
         "step": step_no,
         "left": [[float(x), float(y)] for x, y in o["left_team"]],
@@ -148,64 +146,84 @@ def snap(o, step_no):
     })
 
 
-snap(raw(), 0)
-scored = False
-
-for k in range(len(steps)):
-    targets = [to_grf(*frames[k + 1][pid]) for pid in ids]
-    plans = pass_plan(k)
-    pending = list(plans)
-    extra = 0
-    t = 0
-    while t < TICKS_PER_STEP + extra:
-        o = raw()
-        own_team, own_player = int(o.get("ball_owned_team", -1)), int(o.get("ball_owned_player", -1))
-        actions = []
-        for i in range(11):
-            px, py = float(o["left_team"][i][0]), float(o["left_team"][i][1])
-            tx, ty = targets[i]
-            dx, dy = tx - px, ty - py
-            dist = math.hypot(dx, dy)
-            act = None
-            # 패스/슛: 계획된 패서가 공을 잡고 있으면 실행
-            for pl in pending:
-                if pl["passer"] == i and own_team == 0 and own_player == i:
-                    aim_dx, aim_dy = pl["to"][0] - px, pl["to"][1] - py
-                    if not pl.get("aimed"):
-                        pl["aimed"] = True
-                        act = dir_action(aim_dx, aim_dy)  # 먼저 조준
+def run_once():
+    """한 판 실행 — (궤적, 득점여부, 공 최대전진 gx) 반환. 아웃이면 그 시점에 종료."""
+    env.reset()
+    traj = []
+    snap(traj, raw(), 0)
+    ended = False
+    for k in range(len(steps)):
+        targets = [to_grf(*frames[k + 1][pid]) for pid in ids]
+        pending = pass_plan(k)
+        extra = 0
+        t = 0
+        while t < TICKS_PER_STEP + extra:
+            o = raw()
+            own_team = int(o.get("ball_owned_team", -1))
+            own_player = int(o.get("ball_owned_player", -1))
+            actions = []
+            for i in range(11):
+                px, py = float(o["left_team"][i][0]), float(o["left_team"][i][1])
+                tx, ty = targets[i]
+                dx, dy = tx - px, ty - py
+                dist = math.hypot(dx, dy)
+                act = None
+                # 패스/슛: 계획된 패서가 공을 잡고 있으면 실행 (조준 1틱 → 발사)
+                for pl in pending:
+                    if pl["passer"] == i and own_team == 0 and own_player == i:
+                        aim_dx, aim_dy = pl["to"][0] - px, pl["to"][1] - py
+                        if not pl.get("aimed"):
+                            pl["aimed"] = True
+                            act = dir_action(aim_dx, aim_dy)
+                        else:
+                            pend_dist = math.hypot(aim_dx, aim_dy)
+                            act = A["shot"] if pl["shot"] else (
+                                A["long_pass"] if pend_dist > 0.5 else A["short_pass"])
+                            pending.remove(pl)
+                        break
+                if act is None:
+                    if dist > 0.02:
+                        act = A["sprint"] if t == 0 and dist > 0.12 else dir_action(dx, dy)
                     else:
-                        pend_dist = math.hypot(aim_dx, aim_dy)
-                        act = A["shot"] if pl["shot"] else (
-                            A["long_pass"] if pend_dist > 0.5 else A["short_pass"])
-                        pending.remove(pl)
-                    break
-            if act is None:
-                if dist > 0.02:
-                    # 스텝 첫 틱에 스프린트 온 (스티키), 이후 방향
-                    act = A["sprint"] if t == 0 and dist > 0.12 else dir_action(dx, dy)
-                else:
-                    act = A["release_direction"]
-            actions.append(act)
-        _, _, done, _ = env.step(actions)
-        snap(raw(), k + 1)
-        if done:
-            scored = True
+                        act = A["release_direction"]
+                actions.append(act)
+            _, _, done, _ = env.step(actions)
+            snap(traj, raw(), k + 1)
+            if done:  # 득점 or 아웃 (end_episode_on_*)
+                ended = True
+                break
+            if int(raw().get("game_mode", 0)) != 0:
+                # 세트피스(프리킥 등) 진입 — 전원 제어 상태에선 진행 불가, 런 종료
+                ended = True
+                break
+            if t == TICKS_PER_STEP + extra - 1 and pending and extra < 20:
+                extra += 5  # 패스 대기 연장
+            t += 1
+        if ended:
             break
-        # 패스가 남았는데 스텝이 끝나가면 최대 20틱 연장 (패서가 공 받기 대기)
-        if t == TICKS_PER_STEP + extra - 1 and pending and extra < 20:
-            extra += 5
-        t += 1
-    if scored:
-        break
+    if not ended:  # 마무리 관찰 2초
+        for _ in range(20):
+            _, _, done, _ = env.step([A["idle"]] * 11)
+            snap(traj, raw(), len(steps))
+            if done:
+                break
+    fin = traj[-1]
+    scored = fin["score"][0] > 0
+    max_gx = max(f["ball"][0] for f in traj)
+    return traj, scored, max_gx
 
-# 마무리 관찰 2초
-if not scored:
-    for _ in range(20):
-        _, _, done, _ = env.step([A["idle"]] * 11)
-        snap(raw(), len(steps))
-        if done:
-            break
+
+RUNS = int(os.environ.get("RUNS", "6"))
+traj, best_gx = None, -2.0
+scored = False
+for r in range(RUNS):
+    t_r, s_r, gx_r = run_once()
+    print(f"  런 {r + 1}/{RUNS}: 틱 {len(t_r)}, 스코어 {t_r[-1]['score']}, 공 최대전진 {gx_r:.2f}")
+    if s_r:
+        traj, scored = t_r, True
+        break
+    if gx_r > best_gx:
+        traj, best_gx = t_r, gx_r
 
 meta = {
     "name": tactic.get("name", tactic.get("id", "tactic")),

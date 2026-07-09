@@ -1,20 +1,35 @@
 /**
- * GRF 궤적(trajectory.json) → 택틱북 리플레이 JSON (R&D 스파이크).
+ * GRF 궤적(trajectory.json) → 택틱북 리플레이 JSON.
  * 출력은 앱 '내 전술 > JSON 가져오기'와 호환되는 envelope — 그대로 임포트해 재생 가능.
- * 사용: node scripts/grf/convert-replay.mjs [샘플간격=8]
+ * 궤적에 meta(execute_tactic.py 출력)가 있으면 선수 구성·이름을 그대로 사용한다.
+ * 사용: node scripts/grf/convert-replay.mjs [샘플간격=8] [출력파일명]
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const SAMPLE = Number(process.argv[2] ?? 8); // 스텝 간격 (1스텝 ≈ 0.1초)
+const OUT_NAME = process.argv[3] ?? 'replay-custom.json';
 const HERE = new URL('.', import.meta.url).pathname;
 
-// 시나리오 AddPlayer 순서와 1:1 (scenario_tacticbook_counter.py)
-const LEFT = [
-  ['gk', 'GK'], ['lb', 'LB'], ['cb1', 'CB'], ['cb2', 'CB'], ['rb', 'RB'],
-  ['lm', 'LM'], ['cm1', 'CM'], ['cm2', 'CM'], ['rm', 'RM'], ['st1', 'ST'], ['st2', 'ST'],
+// 기본값: a-counter 스파이크 시나리오의 AddPlayer 순서 (meta 없는 구버전 궤적용)
+const DEFAULT_LEFT = [
+  ['gk', 'GK'],
+  ['lb', 'LB'],
+  ['cb1', 'CB'],
+  ['cb2', 'CB'],
+  ['rb', 'RB'],
+  ['lm', 'LM'],
+  ['cm1', 'CM'],
+  ['cm2', 'CM'],
+  ['rm', 'RM'],
+  ['st1', 'ST'],
+  ['st2', 'ST'],
 ];
-const RIGHT = [
-  ['o-gk', 'GK'], ['o-cb1', 'CB'], ['o-cb2', 'CB'], ['o-cm1', 'CM'], ['o-cm2', 'CM'],
+const DEFAULT_RIGHT = [
+  ['o-gk', 'GK'],
+  ['o-cb1', 'CB'],
+  ['o-cb2', 'CB'],
+  ['o-cm1', 'CM'],
+  ['o-cm2', 'CM'],
 ];
 
 const clamp = (n) => Math.max(0, Math.min(100, Math.round(n * 10) / 10));
@@ -24,52 +39,62 @@ const toLogical = ([gx, gy]) => ({
   y: clamp(((gx + 1) / 2) * 100),
 });
 
-const { frames } = JSON.parse(readFileSync(HERE + 'trajectory.json', 'utf-8'));
-console.log(`프레임 ${frames.length}개 로드 (게임시간 ~${(frames.length * 0.1).toFixed(1)}초)`);
+const { frames, meta } = JSON.parse(readFileSync(HERE + 'trajectory.json', 'utf-8'));
+const LEFT = meta ? meta.leftIds.map((id, i) => [id, meta.leftRoles[i]]) : DEFAULT_LEFT;
+const RIGHT = meta ? meta.rightIds.map((id, i) => [id, meta.rightRoles[i]]) : DEFAULT_RIGHT;
+console.log(
+  `프레임 ${frames.length}개 로드 (게임시간 ~${(frames.length * 0.1).toFixed(1)}초)${meta ? ` — ${meta.name}` : ''}`
+);
 
 const f0 = frames[0];
 const players = LEFT.map(([id, role], i) => ({ id, role, ...toLogical(f0.left[i]) }));
 const opponents = RIGHT.map(([id, role], i) => ({ id, role, ...toLogical(f0.right[i]) }));
 
-const steps = [];
-for (let k = SAMPLE; k < frames.length; k += SAMPLE) {
-  const fr = frames[k];
+const stepAt = (fr, k, caption) => {
   const positions = {};
   LEFT.forEach(([id], i) => (positions[id] = toLogical(fr.left[i])));
   RIGHT.forEach(([id], i) => (positions[id] = toLogical(fr.right[i])));
-  steps.push({
-    caption: `시뮬레이션 t=${(k * 0.1).toFixed(1)}s — GRF 물리 엔진 궤적`,
-    positions,
-    ball: toLogical(fr.ball),
-  });
+  return { caption, positions, ball: toLogical(fr.ball) };
+};
+
+const steps = [];
+for (let k = SAMPLE; k < frames.length; k += SAMPLE) {
+  steps.push(stepAt(frames[k], k, `시뮬레이션 t=${(k * 0.1).toFixed(1)}s — GRF 물리 엔진 궤적`));
 }
 // 마지막 프레임도 포함 (득점 순간 등)
 const lastIdx = frames.length - 1;
 if (lastIdx % SAMPLE !== 0) {
   const fr = frames[lastIdx];
-  const positions = {};
-  LEFT.forEach(([id], i) => (positions[id] = toLogical(fr.left[i])));
-  RIGHT.forEach(([id], i) => (positions[id] = toLogical(fr.right[i])));
-  steps.push({
-    caption: `시뮬레이션 종료 (스코어 ${fr.score.join(':')})`,
-    positions,
-    ball: toLogical(fr.ball),
-  });
+  const scored = fr.score[0] > 0;
+  steps.push(
+    stepAt(
+      fr,
+      lastIdx,
+      scored
+        ? `⚽ 골! (스코어 ${fr.score.join(':')})`
+        : `시뮬레이션 종료 (스코어 ${fr.score.join(':')})`
+    )
+  );
 }
 
+const name = meta ? `[전술 실행] ${meta.name}` : '[시뮬레이션] 역습 리플레이';
 const envelope = {
   version: 1,
   items: [
     {
-      id: 'c-grf-counter',
-      name: '[시뮬레이션] 역습 리플레이',
+      id: meta ? `c-grf-exec-${meta.sourceId ?? 'tactic'}` : 'c-grf-counter',
+      name,
       updatedAt: 0, // 임포트 시점 기준으로 표시됨
       board: { players, opponents, ball: toLogical(f0.ball), steps },
-      source: { id: 'a-counter', name: '역습 (카운터 어택)' },
+      source: meta?.sourceId
+        ? { id: meta.sourceId, name: meta.name }
+        : { id: 'a-counter', name: '역습 (카운터 어택)' },
     },
   ],
 };
 
-const out = HERE + 'replay-custom.json';
+const out = HERE + OUT_NAME;
 writeFileSync(out, JSON.stringify(envelope, null, 2));
-console.log(`✓ ${out} — 선수 ${players.length}+${opponents.length}명, ${steps.length}단계 리플레이`);
+console.log(
+  `✓ ${out} — 선수 ${players.length}+${opponents.length}명, ${steps.length}단계 리플레이`
+);
