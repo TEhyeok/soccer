@@ -77,7 +77,8 @@ if (lastIdx % SAMPLE !== 0) {
   );
 }
 
-const name = meta ? `[전술 실행] ${meta.name}` : '[시뮬레이션] 역습 리플레이';
+const name =
+  meta?.displayName ?? (meta ? `[전술 실행] ${meta.name}` : '[시뮬레이션] 역습 리플레이');
 const envelope = {
   version: 1,
   items: [
