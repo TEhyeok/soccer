@@ -1,11 +1,15 @@
 /**
  * 3D 전술 보드 (v1.1.5 본 구현, ADR-008).
  * - 클래식 WebGLRenderer (스파이크 실측: WebGPU 대비 청크 -37%, 폴백 fps 3.2배)
- * - 스타일화 선수 피규어: 몸통·머리 InstancedMesh(팀당 draw call 2) + 역할 라벨 스프라이트
+ * - 스타일화 선수 피규어: 몸통·머리 InstancedMesh + 역할 라벨 스프라이트
  * - 화살표: 피치 바닥 리본 메시 (run 실선 / pass 점선 분절 / press 적색)
  * - steps 재생: 2D와 동일한 lib/playback 순수 함수 재사용 (단계·배속·캡션 컨트롤)
  * - 품질 자동 티어: fps 실측 → pixelRatio 하향, 비활성 탭 렌더 정지, reduced-motion 스틸 컷
- * - lazy-load 전용: React.lazy로만 임포트 — 기본 번들 포함 금지
+ *
+ * 아키텍처 (적대적 리뷰 반영): 렌더러·씬·카메라는 마운트 시 1회만 생성하고,
+ * board 변경 시에는 ① 구조(선수 id/role 구성)가 바뀌면 피규어만 재구성,
+ * ② 위치만 바뀌면 인스턴스 매트릭스 갱신만 한다 — 편집기 드래그(초당 수십 회
+ * board 교체)에도 WebGL 컨텍스트 재생성이 없다.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
@@ -62,7 +66,6 @@ function pitchTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-/** 역할 라벨 스프라이트 텍스처 (role별 캐시는 호출부에서) */
 function labelTexture(role: string, opponent: boolean): THREE.CanvasTexture {
   const c = document.createElement('canvas');
   c.width = 128;
@@ -83,7 +86,6 @@ function labelTexture(role: string, opponent: boolean): THREE.CanvasTexture {
 
 /** 화살표 → 바닥 리본 지오메트리 (pass는 점선 분절) */
 function buildArrowGroup(arrows: Arrow[] | undefined, group: THREE.Group): void {
-  // 기존 메시 정리
   for (const child of [...group.children]) {
     group.remove(child);
     const mesh = child as THREE.Mesh;
@@ -99,7 +101,6 @@ function buildArrowGroup(arrows: Arrow[] | undefined, group: THREE.Group): void 
     const len = dir.length();
     if (len < 1) continue;
 
-    // 2D와 같은 곡률 규칙: 진행 방향 법선 쪽 제어점
     const mid = from.clone().add(to).multiplyScalar(0.5);
     const normal = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
     const ctrl = mid.add(normal.multiplyScalar((a.curve ?? 0) * len * 0.35));
@@ -111,7 +112,6 @@ function buildArrowGroup(arrows: Arrow[] | undefined, group: THREE.Group): void 
     const positions: number[] = [];
     const headLen = Math.min(2.2, len * 0.25);
 
-    // 화살촉 직전까지 리본 (pass는 4분절 중 2분절만 채워 점선)
     for (let i = 0; i < SAMPLES; i++) {
       if (a.kind === 'pass' && i % 4 >= 2) continue;
       const p0 = pts[i];
@@ -127,7 +127,6 @@ function buildArrowGroup(arrows: Arrow[] | undefined, group: THREE.Group): void 
       positions.push(b0.x, 0, b0.z, b1.x, 0, b1.z, a1.x, 0, a1.z);
     }
 
-    // 화살촉 (곡선 끝 접선 방향)
     const tangent = curve.getTangent(1).setY(0).normalize();
     const headSide = new THREE.Vector3(-tangent.z, 0, tangent.x).multiplyScalar(headLen * 0.45);
     const base = to.clone().sub(tangent.clone().multiplyScalar(headLen));
@@ -145,9 +144,127 @@ function buildArrowGroup(arrows: Arrow[] | undefined, group: THREE.Group): void 
       depthWrite: false,
     });
     const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.y = 0.07; // 잔디 z-fight 방지
+    mesh.position.y = 0.07;
     mesh.renderOrder = 1;
     group.add(mesh);
+  }
+}
+
+/** 마운트 1회 생성되는 3D 세계 */
+interface World {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  renderer: THREE.WebGLRenderer;
+  controls: OrbitControls;
+  arrowGroup: THREE.Group;
+  ball: THREE.Mesh;
+  bodyGeo: THREE.CapsuleGeometry;
+  headGeo: THREE.SphereGeometry;
+  teamMat: THREE.MeshLambertMaterial;
+  oppMat: THREE.MeshLambertMaterial;
+  headMat: THREE.MeshLambertMaterial;
+  figures: Figures | null;
+  lastArrows: Arrow[] | undefined;
+}
+
+/** board 구조(선수 구성)에 종속 — 구조가 바뀔 때만 재구성 */
+interface Figures {
+  signature: string;
+  teamBody: THREE.InstancedMesh;
+  oppBody: THREE.InstancedMesh;
+  heads: THREE.InstancedMesh;
+  sprites: Map<string, THREE.Sprite>;
+  teamCount: number;
+}
+
+function figureSignature(frame: Frame): string {
+  const key = (p: { id: string; role: string }) => `${p.id}:${p.role}`;
+  return `${frame.players.map(key).join(',')}|${(frame.opponents ?? []).map(key).join(',')}`;
+}
+
+function disposeFigures(w: World): void {
+  const f = w.figures;
+  if (!f) return;
+  w.scene.remove(f.teamBody, f.oppBody, f.heads);
+  f.teamBody.dispose();
+  f.oppBody.dispose();
+  f.heads.dispose();
+  for (const sprite of f.sprites.values()) {
+    w.scene.remove(sprite);
+    sprite.material.map?.dispose();
+    sprite.material.dispose();
+  }
+  w.figures = null;
+}
+
+function buildFigures(w: World, frame: Frame): void {
+  disposeFigures(w);
+  const teamCount = frame.players.length;
+  const oppCount = frame.opponents?.length ?? 0;
+
+  const teamBody = new THREE.InstancedMesh(w.bodyGeo, w.teamMat, Math.max(teamCount, 1));
+  const oppBody = new THREE.InstancedMesh(w.bodyGeo, w.oppMat, Math.max(oppCount, 1));
+  const heads = new THREE.InstancedMesh(w.headGeo, w.headMat, Math.max(teamCount + oppCount, 1));
+  teamBody.visible = teamCount > 0;
+  oppBody.visible = oppCount > 0;
+  heads.visible = teamCount + oppCount > 0;
+  w.scene.add(teamBody, oppBody, heads);
+
+  const sprites = new Map<string, THREE.Sprite>();
+  for (const p of [...frame.players, ...(frame.opponents ?? [])]) {
+    if (!p.role.trim()) continue;
+    const tex = labelTexture(p.role, p.id.startsWith('o-'));
+    const sprite = new THREE.Sprite(
+      new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })
+    );
+    sprite.scale.set(4.2, 2.1, 1);
+    sprites.set(p.id, sprite);
+    w.scene.add(sprite);
+  }
+
+  w.figures = { signature: figureSignature(frame), teamBody, oppBody, heads, sprites, teamCount };
+}
+
+const dummy = new THREE.Object3D();
+
+/** 프레임 → 씬 반영. 구조가 다르면 피규어 재구성, 아니면 매트릭스 갱신만 */
+function applyFrame(w: World, frame: Frame): void {
+  const sig = figureSignature(frame);
+  if (!w.figures || w.figures.signature !== sig) buildFigures(w, frame);
+  const f = w.figures!;
+
+  frame.players.forEach((p, i) => {
+    const x = toX(p.x);
+    const z = toZ(p.y);
+    dummy.position.set(x, 1.75, z);
+    dummy.updateMatrix();
+    f.teamBody.setMatrixAt(i, dummy.matrix);
+    dummy.position.set(x, 3.35, z);
+    dummy.updateMatrix();
+    f.heads.setMatrixAt(i, dummy.matrix);
+    f.sprites.get(p.id)?.position.set(x, 5.1, z);
+  });
+  frame.opponents?.forEach((p, i) => {
+    const x = toX(p.x);
+    const z = toZ(p.y);
+    dummy.position.set(x, 1.75, z);
+    dummy.updateMatrix();
+    f.oppBody.setMatrixAt(i, dummy.matrix);
+    dummy.position.set(x, 3.35, z);
+    dummy.updateMatrix();
+    f.heads.setMatrixAt(f.teamCount + i, dummy.matrix);
+    f.sprites.get(p.id)?.position.set(x, 5.1, z);
+  });
+  f.teamBody.instanceMatrix.needsUpdate = true;
+  f.oppBody.instanceMatrix.needsUpdate = true;
+  f.heads.instanceMatrix.needsUpdate = true;
+
+  w.ball.visible = !!frame.ball;
+  if (frame.ball) w.ball.position.set(toX(frame.ball.x), 0.9, toZ(frame.ball.y));
+
+  if (frame.arrows !== w.lastArrows) {
+    w.lastArrows = frame.arrows;
+    buildArrowGroup(frame.arrows, w.arrowGroup);
   }
 }
 
@@ -173,13 +290,13 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
   const [preset, setPreset] = useState<PresetKey>('broadcast');
   const [quality, setQuality] = useState('');
 
-  // 렌더 루프가 읽는 가변 상태 (리렌더 없이)
+  const worldRef = useRef<World | null>(null);
   const playRef = useRef({ playing: false, pos: { step: 0, t: 1 } as Pos, speedIdx: 0 });
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const controlsRef = useRef<OrbitControls | null>(null);
   const playedOnce = useRef(false);
 
   const frames = useMemo(() => buildFrames(board), [board]);
+  const framesRef = useRef(frames);
+  framesRef.current = frames;
   const last = frames.length - 1;
   const hasSteps = last >= 1;
   const reduced = useMemo(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches, []);
@@ -187,6 +304,7 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
   playRef.current.playing = playing;
   playRef.current.speedIdx = speedIdx;
 
+  // ── 마운트 1회: 렌더러·씬·카메라·루프 (board와 무관 — 편집 중 재생성 금지) ──
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
@@ -198,7 +316,6 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
     scene.fog = new THREE.Fog(0x0d1410, 150, 320);
 
     const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 500);
-    cameraRef.current = camera;
     camera.position.set(...CAMERA_PRESETS.broadcast.pos);
 
     scene.add(new THREE.AmbientLight(0xffffff, 1.1));
@@ -207,97 +324,18 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
     scene.add(sun);
 
     const pitchTex = pitchTexture();
-    const pitch = new THREE.Mesh(
-      new THREE.PlaneGeometry(68, 105),
-      new THREE.MeshLambertMaterial({ map: pitchTex })
-    );
+    const pitchMat = new THREE.MeshLambertMaterial({ map: pitchTex });
+    const pitch = new THREE.Mesh(new THREE.PlaneGeometry(68, 105), pitchMat);
     pitch.rotation.x = -Math.PI / 2;
     scene.add(pitch);
 
-    // ── 선수 피규어: 몸통+머리 인스턴싱, 라벨 스프라이트 ──
-    const teamCount = frames[0].players.length;
-    const oppCount = frames[0].opponents?.length ?? 0;
-    const bodyGeo = new THREE.CapsuleGeometry(0.85, 1.8, 4, 10);
-    const headGeo = new THREE.SphereGeometry(0.55, 12, 10);
-    const headMat = new THREE.MeshLambertMaterial({ color: 0xf1d5b5 });
-
-    const teamBody = new THREE.InstancedMesh(
-      bodyGeo,
-      new THREE.MeshLambertMaterial({ color: 0xfbbf24 }),
-      Math.max(teamCount, 1)
-    );
-    const oppBody = new THREE.InstancedMesh(
-      bodyGeo,
-      new THREE.MeshLambertMaterial({ color: 0xe2e8f0 }),
-      Math.max(oppCount, 1)
-    );
-    const heads = new THREE.InstancedMesh(headGeo, headMat, Math.max(teamCount + oppCount, 1));
-    teamBody.visible = teamCount > 0;
-    oppBody.visible = oppCount > 0;
-    scene.add(teamBody, oppBody, heads);
-
-    // 라벨 스프라이트 (role 있는 선수만)
-    const labelTextures: THREE.CanvasTexture[] = [];
-    const sprites = new Map<string, THREE.Sprite>();
-    const everyone = [...frames[0].players, ...(frames[0].opponents ?? [])];
-    for (const p of everyone) {
-      if (!p.role.trim()) continue;
-      const isOpp = p.id.startsWith('o-');
-      const tex = labelTexture(p.role, isOpp);
-      labelTextures.push(tex);
-      const sprite = new THREE.Sprite(
-        new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })
-      );
-      sprite.scale.set(4.2, 2.1, 1);
-      sprites.set(p.id, sprite);
-      scene.add(sprite);
-    }
-
-    const ball = new THREE.Mesh(
-      new THREE.SphereGeometry(0.9, 16, 12),
-      new THREE.MeshLambertMaterial({ color: 0xffffff })
-    );
+    const ballGeo = new THREE.SphereGeometry(0.9, 16, 12);
+    const ballMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const ball = new THREE.Mesh(ballGeo, ballMat);
     scene.add(ball);
 
     const arrowGroup = new THREE.Group();
     scene.add(arrowGroup);
-    let lastArrows: Arrow[] | undefined;
-
-    const dummy = new THREE.Object3D();
-    const applyFrame = (frame: Frame) => {
-      frame.players.forEach((p, i) => {
-        const x = toX(p.x);
-        const z = toZ(p.y);
-        dummy.position.set(x, 1.75, z);
-        dummy.updateMatrix();
-        teamBody.setMatrixAt(i, dummy.matrix);
-        dummy.position.set(x, 3.35, z);
-        dummy.updateMatrix();
-        heads.setMatrixAt(i, dummy.matrix);
-        sprites.get(p.id)?.position.set(x, 5.1, z);
-      });
-      frame.opponents?.forEach((p, i) => {
-        const x = toX(p.x);
-        const z = toZ(p.y);
-        dummy.position.set(x, 1.75, z);
-        dummy.updateMatrix();
-        oppBody.setMatrixAt(i, dummy.matrix);
-        dummy.position.set(x, 3.35, z);
-        dummy.updateMatrix();
-        heads.setMatrixAt(teamCount + i, dummy.matrix);
-        sprites.get(p.id)?.position.set(x, 5.1, z);
-      });
-      teamBody.instanceMatrix.needsUpdate = true;
-      oppBody.instanceMatrix.needsUpdate = true;
-      heads.instanceMatrix.needsUpdate = true;
-      ball.visible = !!frame.ball;
-      if (frame.ball) ball.position.set(toX(frame.ball.x), 0.9, toZ(frame.ball.y));
-      if (frame.arrows !== lastArrows) {
-        lastArrows = frame.arrows;
-        buildArrowGroup(frame.arrows, arrowGroup);
-      }
-    };
-    applyFrame(frames[0]);
 
     let renderer: THREE.WebGLRenderer;
     try {
@@ -325,19 +363,41 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
     controls.minDistance = 25;
     controls.maxDistance = 220;
     controls.enableDamping = true;
-    controlsRef.current = controls;
+
+    const world: World = {
+      scene,
+      camera,
+      renderer,
+      controls,
+      arrowGroup,
+      ball,
+      bodyGeo: new THREE.CapsuleGeometry(0.85, 1.8, 4, 10),
+      headGeo: new THREE.SphereGeometry(0.55, 12, 10),
+      teamMat: new THREE.MeshLambertMaterial({ color: 0xfbbf24 }),
+      oppMat: new THREE.MeshLambertMaterial({ color: 0xe2e8f0 }),
+      headMat: new THREE.MeshLambertMaterial({ color: 0xf1d5b5 }),
+      figures: null,
+      lastArrows: undefined,
+    };
+    worldRef.current = world;
+    applyFrame(world, framesRef.current[0]);
     setStatus('ready');
 
-    // ── 품질 자동 티어: 초반 fps 실측 → pixelRatio 하향 ──
+    // 품질 자동 티어: fps 실측 → pixelRatio 하향 (탭 복귀 시 측정 창 리셋 — 리뷰 반영)
     let frameCount = 0;
     let tierStart = performance.now();
-    let tier = 0; // 0: 기본(≤1.5), 1: 1.0, 2: 0.75
+    let tier = 0;
+    const resetMeasure = (now: number) => {
+      frameCount = 0;
+      tierStart = now;
+    };
     const measureQuality = (now: number) => {
       frameCount++;
       if (frameCount < 60) return;
-      const fps = (frameCount * 1000) / (now - tierStart);
-      frameCount = 0;
-      tierStart = now;
+      const elapsed = now - tierStart;
+      resetMeasure(now);
+      if (elapsed > 4000) return; // 탭 숨김 등 비정상 창은 판정에서 제외
+      const fps = (60 * 1000) / elapsed;
       if (fps < 28 && tier < 2) {
         tier++;
         renderer.setPixelRatio(tier === 1 ? 1 : 0.75);
@@ -346,7 +406,6 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
       }
     };
 
-    // ── 렌더 루프 (재생 상태는 playRef로 구동) ──
     let lastTick = 0;
     const loop = (now: number) => {
       if (disposed) return;
@@ -354,14 +413,15 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
       controls.update();
       measureQuality(now);
 
+      const fr = framesRef.current;
+      const lastIdx = fr.length - 1;
       const s = playRef.current;
-      if (s.playing && hasSteps) {
+      if (s.playing && lastIdx >= 1) {
         if (!lastTick) lastTick = now;
-        const duration = reduced ? STEP_MS * 1.4 : STEP_MS;
         let { step, t } = s.pos;
-        t += ((now - lastTick) * SPEEDS[s.speedIdx]) / duration;
+        t += ((now - lastTick) * SPEEDS[s.speedIdx]) / STEP_MS;
         if (t >= 1) {
-          if (step < last) {
+          if (step < lastIdx) {
             step += 1;
             t = 0;
           } else {
@@ -372,26 +432,25 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
         }
         s.pos = { step, t };
         setPosUi(s.pos);
+        // reduced-motion: 해당 단계의 "도착 상태"를 스틸 컷으로 — 캡션과 장면 일치 (리뷰 반영)
         applyFrame(
-          reduced || t >= 1
-            ? frames[t >= 1 ? step : step - 1]
-            : interpolateFrames(frames[step - 1], frames[step], easeInOut(t))
+          world,
+          reduced || t >= 1 ? fr[step] : interpolateFrames(fr[step - 1], fr[step], easeInOut(t))
         );
       } else if (!s.playing && s.pos.t >= 1) {
-        // step 경계 가드: steps 없는 보드(frames 1개)도 안전하게 기본 대형 표시
-        applyFrame(frames[Math.min(s.pos.step, last)]);
+        applyFrame(world, fr[Math.min(s.pos.step, lastIdx)]);
       }
       lastTick = now;
       renderer.render(scene, camera);
     };
     raf = requestAnimationFrame(loop);
 
-    // 비활성 탭 렌더 정지 (배터리 — v1.1.5-E3)
     const onVisibility = () => {
       if (document.hidden) {
         cancelAnimationFrame(raf);
       } else {
         lastTick = 0;
+        resetMeasure(performance.now()); // 숨김 시간이 fps 판정을 오염시키지 않도록
         raf = requestAnimationFrame(loop);
       }
     };
@@ -403,20 +462,36 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
       window.removeEventListener('resize', resize);
       document.removeEventListener('visibilitychange', onVisibility);
       controls.dispose();
-      buildArrowGroup(undefined, arrowGroup); // 화살표 지오메트리 정리
-      for (const tex of labelTextures) tex.dispose();
-      for (const sprite of sprites.values()) sprite.material.dispose();
-      bodyGeo.dispose();
-      headGeo.dispose();
+      disposeFigures(world);
+      buildArrowGroup(undefined, arrowGroup);
+      world.bodyGeo.dispose();
+      world.headGeo.dispose();
+      world.teamMat.dispose();
+      world.oppMat.dispose();
+      world.headMat.dispose();
       pitchTex.dispose();
+      pitchMat.dispose();
       pitch.geometry.dispose();
-      ball.geometry.dispose();
+      ballGeo.dispose();
+      ballMat.dispose();
       renderer.dispose();
+      worldRef.current = null;
       mount.replaceChildren();
     };
-    // frames는 board에서 파생 — board 변경 시 씬 전체 재구성
+    // 마운트 1회 — board 변경은 아래 frames 이펙트가 증분 반영
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [board]);
+  }, []);
+
+  // ── board 변경: 재생 위치 리셋 + 씬 증분 반영 (렌더러 재생성 없음 — 리뷰 반영) ──
+  useEffect(() => {
+    const world = worldRef.current;
+    if (!world) return;
+    setPlaying(false);
+    playRef.current.playing = false;
+    playRef.current.pos = { step: 0, t: 1 };
+    setPosUi(playRef.current.pos);
+    applyFrame(world, frames[0]);
+  }, [frames]);
 
   const play = () => {
     if (!playedOnce.current) {
@@ -437,11 +512,11 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
 
   const applyPreset = (key: PresetKey) => {
     setPreset(key);
-    const cam = cameraRef.current;
-    if (!cam || !controlsRef.current) return;
+    const world = worldRef.current;
+    if (!world) return;
     const [x, y, z] = CAMERA_PRESETS[key].pos;
-    cam.position.set(x, y, z);
-    controlsRef.current.target.set(0, 0, 0);
+    world.camera.position.set(x, y, z);
+    world.controls.target.set(0, 0, 0);
   };
 
   if (status === 'unsupported') {
@@ -457,10 +532,10 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
     );
   }
 
+  // 캡션·단계 표기: board 교체 직후에도 범위 밖 접근 금지 + 일시정지 중에도 캡션 유지 (리뷰 반영)
+  const shownStep = Math.min(posUi.step, last);
   const caption =
-    hasSteps && posUi.step >= 1 && (playing || posUi.t >= 1)
-      ? (frames[posUi.step].caption ?? '')
-      : '';
+    hasSteps && shownStep >= 1 && (playing || posUi.t > 0) ? (frames[shownStep].caption ?? '') : '';
 
   return (
     <div className="board3d">
@@ -471,7 +546,7 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
           {hasSteps && (
             <div className="playback__caption" aria-live="polite">
               <span className="playback__stepnum mono">
-                {posUi.step}/{last}
+                {shownStep}/{last}
               </span>
               {caption || '▶ 재생으로 시퀀스 시작'}
             </div>
@@ -481,8 +556,8 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
               <>
                 <button
                   className="playback__btn"
-                  onClick={() => seek(posUi.step - 1)}
-                  disabled={posUi.step <= 1}
+                  onClick={() => seek(shownStep - 1)}
+                  disabled={shownStep <= 1}
                   aria-label="이전 단계"
                 >
                   ⏮
@@ -496,8 +571,8 @@ export default function Board3D({ id, board, showMeta = true }: Props) {
                 </button>
                 <button
                   className="playback__btn"
-                  onClick={() => seek(posUi.step + 1)}
-                  disabled={posUi.step >= last && posUi.t >= 1}
+                  onClick={() => seek(shownStep + 1)}
+                  disabled={shownStep >= last && posUi.t >= 1}
                   aria-label="다음 단계"
                 >
                   ⏭
