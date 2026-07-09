@@ -18,6 +18,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 BOARD_PATH = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "board-a-counter.json")
 TICKS_PER_STEP = int(sys.argv[2]) if len(sys.argv) > 2 else 30  # 1틱 = 0.1초
 SCENARIO_NAME = "tacticbook_exec"
+RENDER = os.environ.get("RENDER") == "1"  # 3D 게임 화면 캡처 모드 (xvfb 필요)
+M = 5 if RENDER else 1  # 렌더 모드: 물리틱 0.1s→0.02s, 시간 스케일 5배
 
 with open(BOARD_PATH) as f:
     tactic = json.load(f)
@@ -140,13 +142,30 @@ env = football_env.create_environment(
     representation="raw",
     number_of_left_players_agent_controls=N_PLAYERS,
     number_of_right_players_agent_controls=0,
-    render=False,
+    render=RENDER,
+    other_config_options={"physics_steps_per_frame": 2, "real_time": False} if RENDER else {},
 )
 core = env.unwrapped._env
 
 
 def raw():
     return core.observation()
+
+
+FRAMES_DIR = os.environ.get("FRAMES_DIR")
+
+
+def save_frame(run_no, idx):
+    if not (RENDER and FRAMES_DIR):
+        return
+    frame = raw().get("frame")
+    if frame is not None:
+        import cv2
+
+        d = os.path.join(FRAMES_DIR, f"run{run_no}")
+        os.makedirs(d, exist_ok=True)
+        cv2.imwrite(os.path.join(d, f"{idx:05d}.jpg"),
+                    cv2.cvtColor(frame, cv2.COLOR_RGB2BGR), [cv2.IMWRITE_JPEG_QUALITY, 88])
 
 
 def snap(traj, o, step_no):
@@ -160,18 +179,19 @@ def snap(traj, o, step_no):
     })
 
 
-def run_once():
+def run_once(run_no=0):
     """한 판 실행 — (궤적, 득점여부, 공 최대전진 gx) 반환. 아웃이면 그 시점에 종료."""
     env.reset()
     traj = []
     snap(traj, raw(), 0)
     ended = False
+    holding = {}  # 패스 발사 후 릴리스까지 조준 방향 유지 (안 하면 백패스 됨)
     for k in range(len(steps)):
         targets = [to_grf(*frames[k + 1][pid]) for pid in ids]
         pending = pass_plan(k)
         extra = 0
         t = 0
-        while t < TICKS_PER_STEP + extra:
+        while t < TICKS_PER_STEP * M + extra:
             o = raw()
             own_team = int(o.get("ball_owned_team", -1))
             own_player = int(o.get("ball_owned_player", -1))
@@ -192,9 +212,16 @@ def run_once():
                         else:
                             pend_dist = math.hypot(aim_dx, aim_dy)
                             act = A["shot"] if pl["shot"] else (
-                                A["long_pass"] if pend_dist > 0.5 else A["short_pass"])
+                                A["long_pass"] if pend_dist > 0.35 else A["short_pass"])
+                            # GRF 패스는 다음 볼 터치에 실행 — 릴리스까지 조준 유지
+                            holding[i] = dir_action(aim_dx, aim_dy)
                             pending.remove(pl)
                         break
+                if act is None and i in holding:
+                    if own_team == 0 and own_player == i:
+                        act = holding[i]
+                    else:
+                        del holding[i]
                 # 공이 우리 소유가 아니면 이번 스텝 패서가 공을 잡으러 간다
                 # (AI와 달리 스크립트 제어는 루즈볼 회수를 명시해야 함)
                 if act is None and own_team != 0 and any(pl["passer"] == i for pl in pending):
@@ -208,6 +235,12 @@ def run_once():
                 actions.append(act)
             _, _, done, _ = env.step(actions)
             snap(traj, raw(), k + 1)
+            save_frame(run_no, len(traj))
+            if os.environ.get("DEBUG"):
+                d = raw()
+                print(f"    k={k} t={t} own=({int(d['ball_owned_team'])},{int(d['ball_owned_player'])})"
+                      f" ball=({float(d['ball'][0]):.3f},{float(d['ball'][1]):.3f})"
+                      f" mode={int(d.get('game_mode', 0))} act[cm]={actions[6] if len(actions) > 6 else '-'}")
             if done:  # 득점 or 아웃 (end_episode_on_*)
                 ended = True
                 break
@@ -215,13 +248,13 @@ def run_once():
                 # 세트피스(프리킥 등) 진입 — 전원 제어 상태에선 진행 불가, 런 종료
                 ended = True
                 break
-            if t == TICKS_PER_STEP + extra - 1 and pending and extra < 20:
-                extra += 5  # 패스 대기 연장
+            if t == TICKS_PER_STEP * M + extra - 1 and pending and extra < 20 * M:
+                extra += 5 * M  # 패스 대기 연장
             t += 1
         if ended:
             break
     if not ended:  # 마무리 관찰 2초
-        for _ in range(20):
+        for _ in range(20 * M):
             _, _, done, _ = env.step([A["idle"]] * N_PLAYERS)
             snap(traj, raw(), len(steps))
             if done:
@@ -236,7 +269,7 @@ RUNS = int(os.environ.get("RUNS", "6"))
 traj, best_gx = None, -2.0
 scored = False
 for r in range(RUNS):
-    t_r, s_r, gx_r = run_once()
+    t_r, s_r, gx_r = run_once(r)
     print(f"  런 {r + 1}/{RUNS}: 틱 {len(t_r)}, 스코어 {t_r[-1]['score']}, 공 최대전진 {gx_r:.2f}")
     if s_r:
         traj, scored = t_r, True
