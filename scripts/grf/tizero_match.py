@@ -43,6 +43,8 @@ with open(os.path.join(os.path.dirname(scenarios_pkg.__file__), SCENARIO + ".py"
         "    _base.build_scenario(builder)\n"
         "    builder.config().end_episode_on_score = True\n"
         f"    builder.config().game_duration = {MAX_TICKS * M}\n"
+        # 골 장면 큐레이션용 상대 난이도 (기본 0.6 = 시나리오 원본)
+        f"    builder.config().right_team_difficulty = {float(os.environ.get('DIFFICULTY', '0.6'))}\n"
     )
 
 import gfootball.env as football_env  # noqa: E402
