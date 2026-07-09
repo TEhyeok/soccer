@@ -30,12 +30,13 @@ env = football_env.create_environment(
     render=False,
 )
 
-obs = env.reset()
+env.reset()
 frames = []
 
 
-def snap(o):
-    raw = o[0] if isinstance(o, (list, tuple)) else o
+def snap():
+    # 에이전트 0명 제어 시 obs 리스트가 비므로 코어 엔진의 전체 상태 dict를 직접 읽는다
+    raw = env.unwrapped._env.observation()
     return {
         "left": [[float(x), float(y)] for x, y in raw["left_team"]],
         "right": [[float(x), float(y)] for x, y in raw["right_team"]],
@@ -44,11 +45,11 @@ def snap(o):
     }
 
 
-frames.append(snap(obs))
+frames.append(snap())
 done = False
 for i in range(STEPS):
-    obs, reward, done, info = env.step([])
-    frames.append(snap(obs))
+    _, reward, done, info = env.step([])
+    frames.append(snap())
     if done:
         print(f"에피소드 종료 @ step {i + 1} (득점/아웃)")
         break
