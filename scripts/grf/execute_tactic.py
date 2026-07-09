@@ -53,7 +53,7 @@ def scenario_source():
         # 전원 에이전트 제어라 아웃 시 스로인 던질 AI가 없음 — False면
         # 엔진이 인플레이 복귀를 무한 대기(행). 반드시 True 유지.
         "    builder.config().end_episode_on_out_of_play = True",
-        "    builder.config().right_team_difficulty = 0.6",
+        "    builder.config().right_team_difficulty = 0.45",
         "    builder.config().left_team_difficulty = 1.0",
     ]
     bx, by = to_grf(**board["ball"]) if board.get("ball") else to_grf(50, 50)
@@ -195,6 +195,15 @@ def run_once(run_no=0):
             o = raw()
             own_team = int(o.get("ball_owned_team", -1))
             own_player = int(o.get("ball_owned_player", -1))
+            bx_, by_ = float(o["ball"][0]), float(o["ball"][1])
+            # 소유권 상실 시 공에 가장 가까운 우리 선수가 압박 (나머진 안무 유지)
+            presser = -1
+            if own_team == 1:
+                presser = min(
+                    range(N_PLAYERS),
+                    key=lambda j: math.hypot(
+                        float(o["left_team"][j][0]) - bx_, float(o["left_team"][j][1]) - by_),
+                )
             actions = []
             for i in range(N_PLAYERS):
                 px, py = float(o["left_team"][i][0]), float(o["left_team"][i][1])
@@ -205,6 +214,10 @@ def run_once(run_no=0):
                 # 패스/슛: 계획된 패서가 공을 잡고 있으면 실행 (조준 1틱 → 발사)
                 for pl in pending:
                     if pl["passer"] == i and own_team == 0 and own_player == i:
+                        # 슛 계획: 골문에서 멀면 먼저 골문 쪽으로 운반 (원거리 슛 방지)
+                        if pl["shot"] and math.hypot(1.0 - px, py) > 0.18:
+                            act = dir_action(1.0 - px, -py)
+                            break
                         aim_dx, aim_dy = pl["to"][0] - px, pl["to"][1] - py
                         if not pl.get("aimed"):
                             pl["aimed"] = True
@@ -225,7 +238,9 @@ def run_once(run_no=0):
                 # 공이 우리 소유가 아니면 이번 스텝 패서가 공을 잡으러 간다
                 # (AI와 달리 스크립트 제어는 루즈볼 회수를 명시해야 함)
                 if act is None and own_team != 0 and any(pl["passer"] == i for pl in pending):
-                    bx_, by_ = float(o["ball"][0]), float(o["ball"][1])
+                    act = dir_action(bx_ - px, by_ - py)
+                # 상대 소유 시 최근접 선수 압박 (역습 실점 방지)
+                if act is None and i == presser:
                     act = dir_action(bx_ - px, by_ - py)
                 if act is None:
                     if dist > 0.02:
