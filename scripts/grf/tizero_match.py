@@ -19,9 +19,10 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 MAX_TICKS = int(sys.argv[1]) if len(sys.argv) > 1 else 3000
 RENDER = os.environ.get("RENDER") == "1"
-# 물리틱/스텝: 렌더는 2 고정(50fps), 헤드리스는 PSPF로 오버라이드 가능
-# (시드 재현으로 렌더와 같은 경기를 얻으려면 헤드리스 스크리닝도 PSPF=2 필요)
-PSPF = 2 if RENDER else int(os.environ.get("PSPF", "10"))
+# 물리틱/스텝: 기본은 학습 주기와 같은 10(0.1s) — TiZero는 이 주기로 학습돼
+# 더 잘게 쪼개면(PSPF<10) 의사결정 과빈도·관측 속도 왜곡으로 움직임이 망가진다.
+# 부드러운 영상은 10fps 프레임을 ffmpeg minterpolate로 보간해서 얻는다.
+PSPF = int(os.environ.get("PSPF", "10"))
 M = 10 // PSPF
 FRAMES_DIR = os.environ.get("FRAMES_DIR")
 TIZERO_DIR = os.environ.get("TIZERO_DIR")
@@ -52,7 +53,11 @@ with open(os.path.join(os.path.dirname(scenarios_pkg.__file__), SCENARIO + ".py"
 
 import gfootball.env as football_env  # noqa: E402
 
-_opts = {} if PSPF == 10 else {"physics_steps_per_frame": PSPF, "real_time": False}
+_opts = {}
+if PSPF != 10:
+    _opts["physics_steps_per_frame"] = PSPF
+if RENDER:
+    _opts["real_time"] = False  # 렌더도 최고 속도로 (실시간 동기화 끔)
 if os.environ.get("SEED"):
     # 시드 고정 재현: 헤드리스로 득점 시드를 찾고 같은 시드로 렌더 (pspf 동일해야 재현됨)
     _opts["game_engine_random_seed"] = int(os.environ["SEED"])
