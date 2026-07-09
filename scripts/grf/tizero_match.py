@@ -19,7 +19,10 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 MAX_TICKS = int(sys.argv[1]) if len(sys.argv) > 1 else 3000
 RENDER = os.environ.get("RENDER") == "1"
-M = 5 if RENDER else 1
+# 물리틱/스텝: 렌더는 2 고정(50fps), 헤드리스는 PSPF로 오버라이드 가능
+# (시드 재현으로 렌더와 같은 경기를 얻으려면 헤드리스 스크리닝도 PSPF=2 필요)
+PSPF = 2 if RENDER else int(os.environ.get("PSPF", "10"))
+M = 10 // PSPF
 FRAMES_DIR = os.environ.get("FRAMES_DIR")
 TIZERO_DIR = os.environ.get("TIZERO_DIR")
 if not TIZERO_DIR or not os.path.isdir(TIZERO_DIR):
@@ -49,13 +52,17 @@ with open(os.path.join(os.path.dirname(scenarios_pkg.__file__), SCENARIO + ".py"
 
 import gfootball.env as football_env  # noqa: E402
 
+_opts = {} if PSPF == 10 else {"physics_steps_per_frame": PSPF, "real_time": False}
+if os.environ.get("SEED"):
+    # 시드 고정 재현: 헤드리스로 득점 시드를 찾고 같은 시드로 렌더 (pspf 동일해야 재현됨)
+    _opts["game_engine_random_seed"] = int(os.environ["SEED"])
 env = football_env.create_environment(
     env_name=SCENARIO,
     representation="raw",
     number_of_left_players_agent_controls=11,
     number_of_right_players_agent_controls=0,
     render=RENDER,
-    other_config_options={"physics_steps_per_frame": 2, "real_time": False} if RENDER else {},
+    other_config_options=_opts,
 )
 core = env.unwrapped._env
 
@@ -115,7 +122,7 @@ for t in range(MAX_TICKS * M):
         print(f"에피소드 종료 @ {t + 1}틱 — 스코어 {traj[-1]['score']}")
         break
 
-out = os.path.join(HERE, "trajectory.json")
+out = os.environ.get("OUT") or os.path.join(HERE, "trajectory.json")
 with open(out, "w") as f:
     json.dump({"meta": meta, "steps": len(traj), "frames": traj}, f)
 print(f"✓ {out} — {len(traj)}틱, 최종 {traj[-1]['score']}, 득점={'예' if scored else '아니오'}")
