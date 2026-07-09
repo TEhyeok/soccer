@@ -17,7 +17,8 @@ def _right(x, y):
 
 
 def build_scenario(builder):
-    builder.config().game_duration = 400
+    # 스텝 수 상한 — 헤드리스(스텝=0.1s)에선 150초, 고fps 렌더 녹화(스텝=0.02s)에선 30초
+    builder.config().game_duration = 1500
     builder.config().deterministic = False
     builder.config().offsides = True
     builder.config().end_episode_on_score = True
