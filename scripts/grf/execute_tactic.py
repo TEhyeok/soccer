@@ -57,16 +57,28 @@ def scenario_source():
     bx, by = to_grf(**board["ball"]) if board.get("ball") else to_grf(50, 50)
     lines.append(f"    builder.SetBallPosition({bx:.4f}, {by:.4f})")
     lines.append("    builder.SetTeam(Team.e_Left)")
-    for p in board["players"]:
+    players = list(board["players"])
+    players.sort(key=lambda p: 0 if p.get("role") == "GK" else 1)
+    if not any(p.get("role") == "GK" for p in players):
+        players.insert(0, {"id": "gk-auto", "role": "GK", "x": 50, "y": 3})
+    board["players"] = players
+    for p in players:
         gx, gy = to_grf(p["x"], p["y"])
         role = ROLE_MAP.get(p.get("role", "CM"), "CM")
         lines.append(f"    builder.AddPlayer({gx:.4f}, {gy:.4f}, e_PlayerRole_{role})  # {p['id']}")
     lines.append("    builder.SetTeam(Team.e_Right)")
-    for p in board.get("opponents") or []:
+    # 엔진 규칙: 각 팀 첫 선수는 반드시 GK — 보드에 상대 GK가 없으면 자동 추가
+    # (없으면 킥오프 로직이 깨져 엔진이 네이티브 행에 빠진다)
+    opponents = list(board.get("opponents") or [])
+    opponents.sort(key=lambda p: 0 if p.get("role") == "GK" else 1)
+    if not any(p.get("role") == "GK" for p in opponents):
+        opponents.insert(0, {"id": "o-gk-auto", "role": "GK", "x": 50, "y": 97})
+    for p in opponents:
         gx, gy = to_grf(p["x"], p["y"])
         role = ROLE_MAP.get(p.get("role", "CM"), "CM")
         # 오른팀은 자기 관점 좌표 (180도 회전)
         lines.append(f"    builder.AddPlayer({-gx:.4f}, {-gy:.4f}, e_PlayerRole_{role})  # {p['id']}")
+    board["opponents"] = opponents  # meta·궤적 매핑도 동일 순서 사용
     return "\n".join(lines) + "\n"
 
 
@@ -103,6 +115,8 @@ def pass_plan(k):
 # ── 3) 제어 루프 ──
 import gfootball.env as football_env
 
+N_PLAYERS = len(board["players"])  # 시나리오 생성 후 확정 (GK 자동 보정 반영)
+
 A = {  # 액션 id (default action set)
     "idle": 0, "left": 1, "top_left": 2, "top": 3, "top_right": 4, "right": 5,
     "bottom_right": 6, "bottom": 7, "bottom_left": 8, "long_pass": 9,
@@ -124,7 +138,7 @@ def dir_action(dx, dy):
 env = football_env.create_environment(
     env_name=SCENARIO_NAME,
     representation="raw",
-    number_of_left_players_agent_controls=11,
+    number_of_left_players_agent_controls=N_PLAYERS,
     number_of_right_players_agent_controls=0,
     render=False,
 )
@@ -162,7 +176,7 @@ def run_once():
             own_team = int(o.get("ball_owned_team", -1))
             own_player = int(o.get("ball_owned_player", -1))
             actions = []
-            for i in range(11):
+            for i in range(N_PLAYERS):
                 px, py = float(o["left_team"][i][0]), float(o["left_team"][i][1])
                 tx, ty = targets[i]
                 dx, dy = tx - px, ty - py
@@ -181,6 +195,11 @@ def run_once():
                                 A["long_pass"] if pend_dist > 0.5 else A["short_pass"])
                             pending.remove(pl)
                         break
+                # 공이 우리 소유가 아니면 이번 스텝 패서가 공을 잡으러 간다
+                # (AI와 달리 스크립트 제어는 루즈볼 회수를 명시해야 함)
+                if act is None and own_team != 0 and any(pl["passer"] == i for pl in pending):
+                    bx_, by_ = float(o["ball"][0]), float(o["ball"][1])
+                    act = dir_action(bx_ - px, by_ - py)
                 if act is None:
                     if dist > 0.02:
                         act = A["sprint"] if t == 0 and dist > 0.12 else dir_action(dx, dy)
@@ -203,7 +222,7 @@ def run_once():
             break
     if not ended:  # 마무리 관찰 2초
         for _ in range(20):
-            _, _, done, _ = env.step([A["idle"]] * 11)
+            _, _, done, _ = env.step([A["idle"]] * N_PLAYERS)
             snap(traj, raw(), len(steps))
             if done:
                 break
