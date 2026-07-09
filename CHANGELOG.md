@@ -2,6 +2,21 @@
 
 표기: [Semantic Versioning](https://semver.org/lang/ko/) · 형식: [Keep a Changelog](https://keepachangelog.com/ko/)
 
+## [1.3.0] — 2026-07-08 · "3D 보기" (로드맵 마일스톤 v1.1.5)
+
+### Added
+- **3D 뷰어 본 구현** (`#/t/:id/3d` 베타 → 정식): 스타일화 선수 피규어(몸통·머리
+  인스턴싱 + 머리 위 역할 라벨), 전술 화살표의 피치 바닥 리본 표현(run 실선/pass
+  점선 분절/press 적색), 시퀀스 재생 컨트롤 완전판(단계 이동·배속·캡션)
+- **품질 자동 티어**: fps 실측 후 pixelRatio 단계 하향(1.5→1→0.75), 비활성 탭
+  렌더 정지, reduced-motion 스틸 컷
+- **커스텀 보드 3D 미리보기**: 편집기에서 '🧊 3D 미리보기' — 내가 만든 보드를
+  3D로 열람 (v1.2-E3 잔여 항목)
+- 계측: view3d_play, view3d_quality
+
+### Fixed
+- steps 없는 보드를 3D로 열면 매 프레임 크래시하던 문제 (초기 재생 위치 경계)
+
 ## [1.2.0] — 2026-07-08 · "나만의 전술 보드"
 
 ### Added

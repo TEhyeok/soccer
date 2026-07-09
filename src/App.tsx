@@ -15,10 +15,10 @@ import { FEEDBACK_EMAIL } from './config';
 // 청크를 못 가져오는 환경(단일 파일 시뮬레이터, 오프라인 미캐시)에선 안내로 폴백.
 const Board3D = lazy(() =>
   import('./components/Board3D').catch(() => ({
-    default: ({ tactic }: { tactic: { id: string } }) => (
+    default: ({ id }: { id: string }) => (
       <div className="empty">
         <p>이 환경에서는 3D 보기를 불러올 수 없습니다.</p>
-        <a className="chip chip--link" href={`#/t/${tactic.id}`}>
+        <a className="chip chip--link" href={`#/t/${id}`}>
           ← 2D 보드로
         </a>
       </div>
@@ -97,7 +97,7 @@ export default function App() {
             </nav>
             <h1 style={{ marginBottom: 12 }}>{detail.name}</h1>
             <Suspense fallback={<p className="board3d__loading">3D 모듈 불러오는 중…</p>}>
-              <Board3D tactic={detail} />
+              <Board3D id={detail.id} name={detail.name} board={detail.board} />
             </Suspense>
           </div>
         ) : detail ? (

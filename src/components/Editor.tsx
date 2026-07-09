@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { Arrow, ArrowKind, Board, PlayerPos } from '../types';
 import { fromClient } from '../lib/coords';
 import { track } from '../lib/analytics';
@@ -14,6 +14,15 @@ import {
 } from '../lib/customTactics';
 import { TACTICS } from '../data';
 import PitchBoard from './PitchBoard';
+
+// 내 보드 3D 미리보기 (v1.1.5) — 별도 청크, 실패 시 안내 폴백
+const Board3D = lazy(() =>
+  import('./Board3D').catch(() => ({
+    default: () => (
+      <p className="board3d__loading">이 환경에서는 3D 미리보기를 불러올 수 없습니다.</p>
+    ),
+  }))
+);
 
 type Tool = 'move' | ArrowKind | 'ball';
 
@@ -81,6 +90,7 @@ export default function Editor({ editingId }: Props) {
   const [tempArrow, setTempArrow] = useState<Arrow | null>(null);
   const [history, setHistory] = useState<Board[]>([]);
   const [shareBusy, setShareBusy] = useState(false);
+  const [show3d, setShow3d] = useState(false);
   // 작성 중이던 보드를 복원해서 열었는지 (UX 감사 ③ — 안내 배너)
   const [restored, setRestored] = useState(() => !editingId && loadDraft() !== null);
   const canStore = useMemo(storageAvailable, []);
@@ -407,10 +417,27 @@ export default function Editor({ editingId }: Props) {
         <button className="chip chip--link" onClick={share} disabled={shareBusy}>
           {shareBusy ? '이미지 만드는 중…' : '📤 이미지로 공유'}
         </button>
+        <button
+          className="chip"
+          onClick={() => {
+            if (!show3d) track('view3d_open', { tactic: 'custom' });
+            setShow3d(!show3d);
+          }}
+        >
+          {show3d ? '3D 닫기' : '🧊 3D 미리보기'}
+        </button>
         <button className="chip" onClick={discard}>
           버리고 새로 시작
         </button>
       </div>
+
+      {show3d && (
+        <div className="editor__preview3d">
+          <Suspense fallback={<p className="board3d__loading">3D 모듈 불러오는 중…</p>}>
+            <Board3D id="custom" name={draft.name} board={board} showMeta={false} />
+          </Suspense>
+        </div>
+      )}
     </div>
   );
 }

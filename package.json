@@ -1,7 +1,7 @@
 {
   "name": "tacticbook",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "택틱북 — 축구 전략·전술 모음집",
   "type": "module",
   "scripts": {

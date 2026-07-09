@@ -843,3 +843,8 @@ body {
   cursor: pointer;
   font-size: 12px;
 }
+
+/* ───────── 3D 미리보기 (v1.1.5) ───────── */
+.editor__preview3d {
+  margin-top: 14px;
+}
